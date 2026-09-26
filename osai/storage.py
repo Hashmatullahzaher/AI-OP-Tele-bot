@@ -73,6 +73,7 @@ class TenantSecurityStore:
             CREATE TABLE IF NOT EXISTS actors (
                 tenant_id TEXT NOT NULL,
                 actor_id TEXT NOT NULL,
+                role TEXT NOT NULL CHECK(role IN ('TENANT_USER','TENANT_ADMIN','PLATFORM_OPERATOR')),
                 status TEXT NOT NULL CHECK(status IN ('ACTIVE','REVOKED')),
                 PRIMARY KEY (tenant_id, actor_id),
                 FOREIGN KEY (tenant_id) REFERENCES tenants(tenant_id) ON DELETE CASCADE
@@ -157,6 +158,9 @@ class TenantSecurityStore:
             );
             """
         )
+        actor_columns = {str(row["name"]) for row in self._db.execute("PRAGMA table_info(actors)").fetchall()}
+        if "role" not in actor_columns:
+            self._db.execute("ALTER TABLE actors ADD COLUMN role TEXT NOT NULL DEFAULT 'TENANT_USER'")
         self._db.commit()
 
     def add_tenant(self, tenant_id: str) -> None:
@@ -166,11 +170,13 @@ class TenantSecurityStore:
         )
         self._db.commit()
 
-    def add_actor(self, tenant_id: str, actor_id: str) -> None:
+    def add_actor(self, tenant_id: str, actor_id: str, *, role: str = "TENANT_USER") -> None:
         self._require_active_tenant(tenant_id)
+        if role not in {"TENANT_USER", "TENANT_ADMIN", "PLATFORM_OPERATOR"}:
+            raise ValueError("unsupported actor role")
         self._db.execute(
-            "INSERT INTO actors(tenant_id,actor_id,status) VALUES(?, ?, 'ACTIVE')",
-            (tenant_id, actor_id),
+            "INSERT INTO actors(tenant_id,actor_id,role,status) VALUES(?, ?, ?, 'ACTIVE')",
+            (tenant_id, actor_id, role),
         )
         self._db.commit()
 
@@ -184,7 +190,9 @@ class TenantSecurityStore:
             raise PolicyDenied("actor unavailable")
 
     def grant(self, tenant_id: str, actor_id: str, capability: str, resource_scope: str) -> None:
-        self._require_active_actor(tenant_id, actor_id)
+        role = self._require_active_actor(tenant_id, actor_id)
+        if role == "PLATFORM_OPERATOR" and not capability.startswith("platform."):
+            raise PolicyDenied("platform operators cannot receive tenant-data capabilities")
         self._db.execute(
             "INSERT INTO grants(tenant_id,actor_id,capability,resource_scope) VALUES(?,?,?,?)",
             (tenant_id, actor_id, capability, resource_scope),
@@ -192,7 +200,16 @@ class TenantSecurityStore:
         self._db.commit()
 
     def authorize(self, context: ExecutionContext, manifest: CapabilityManifest) -> None:
-        self._require_active_actor(context.tenant_id, context.actor_id)
+        role = self._require_active_actor(context.tenant_id, context.actor_id)
+        if role == "PLATFORM_OPERATOR" and not manifest.capability.startswith("platform."):
+            self.append_audit(
+                context=context,
+                event="policy.deny",
+                capability=manifest.capability,
+                resource_scope=",".join(sorted(set(context.resource_scope) or {"*"})),
+                result="DENIED",
+            )
+            raise PolicyDenied("tenant data capability denied")
         requested = set(context.resource_scope) or {"*"}
         rows = self._db.execute(
             "SELECT resource_scope FROM grants WHERE tenant_id=? AND actor_id=? AND capability=?",
@@ -235,7 +252,7 @@ class TenantSecurityStore:
         connector_id: str,
     ) -> str:
         self._same_tenant(context, owner_tenant_id)
-        self._require_active_actor(context.tenant_id, context.actor_id)
+        self._require_tenant_actor(context.tenant_id, context.actor_id)
         allowed = self._db.execute(
             "SELECT 1 FROM grants WHERE tenant_id=? AND actor_id=? AND capability=? "
             "AND resource_scope IN (?, '*') LIMIT 1",
@@ -273,7 +290,7 @@ class TenantSecurityStore:
         object_id: str,
     ) -> dict[str, Any]:
         self._same_tenant(context, owner_tenant_id)
-        self._require_active_actor(context.tenant_id, context.actor_id)
+        self._require_tenant_actor(context.tenant_id, context.actor_id)
         row = self._db.execute(
             "SELECT payload_json FROM scoped_objects WHERE tenant_id=? AND object_kind=? AND object_id=?",
             (context.tenant_id, kind, object_id),
@@ -307,7 +324,7 @@ class TenantSecurityStore:
         """
 
         self._validate_bot_alias(bot_alias)
-        self._require_active_actor(tenant_id, actor_id)
+        self._require_tenant_actor(tenant_id, actor_id)
         if now_epoch < 0:
             raise ValueError("now_epoch must be non-negative")
         if ttl_seconds < 60 or ttl_seconds > 3600:
@@ -354,7 +371,7 @@ class TenantSecurityStore:
                 raise PolicyDenied("pairing unavailable")
             tenant_id = str(row["tenant_id"])
             actor_id = str(row["actor_id"])
-            self._require_active_actor(tenant_id, actor_id)
+            self._require_tenant_actor(tenant_id, actor_id)
             existing = self._db.execute(
                 "SELECT status FROM telegram_bindings WHERE bot_alias=? AND chat_id=?",
                 (bot_alias, chat_id),
@@ -422,7 +439,7 @@ class TenantSecurityStore:
         ).fetchone()
         if row is None or row["status"] != "ACTIVE":
             raise PolicyDenied("telegram identity unavailable")
-        self._require_active_actor(str(row["tenant_id"]), str(row["actor_id"]))
+        self._require_tenant_actor(str(row["tenant_id"]), str(row["actor_id"]))
         return TelegramBinding(
             bot_alias=str(row["bot_alias"]),
             chat_id=int(row["chat_id"]),
@@ -599,11 +616,18 @@ class TenantSecurityStore:
         if row is None or row["status"] != "ACTIVE":
             raise PolicyDenied("tenant unavailable")
 
-    def _require_active_actor(self, tenant_id: str, actor_id: str) -> None:
+    def _require_active_actor(self, tenant_id: str, actor_id: str) -> str:
         self._require_active_tenant(tenant_id)
         row = self._db.execute(
-            "SELECT status FROM actors WHERE tenant_id=? AND actor_id=?",
+            "SELECT status,role FROM actors WHERE tenant_id=? AND actor_id=?",
             (tenant_id, actor_id),
         ).fetchone()
         if row is None or row["status"] != "ACTIVE":
             raise PolicyDenied("actor unavailable")
+        return str(row["role"])
+
+    def _require_tenant_actor(self, tenant_id: str, actor_id: str) -> str:
+        role = self._require_active_actor(tenant_id, actor_id)
+        if role == "PLATFORM_OPERATOR":
+            raise PolicyDenied("tenant resource unavailable")
+        return role
