@@ -22,6 +22,7 @@ Therefore this milestone does not claim that a live LLM understood free-form Dar
 - only a SHA-256 token hash is stored;
 - token is bound to tenant, actor, action and normalized payload digest;
 - token expires after a short TTL;
+- pending raw request payload is redacted immediately after approve/cancel, and expired proposals are purged;
 - token is single-use;
 - cancel consumes the token without mutation;
 - a token issued to one paired Telegram actor cannot be used by another actor;
