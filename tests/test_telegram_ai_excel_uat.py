@@ -219,6 +219,11 @@ class TelegramAIExcelUATTests(unittest.TestCase):
         completed = self.message(3, f"/approve {token}")
         self.assertIn("CHANGE COMPLETED", completed)
         self.assertIn("CUS-000001", completed)
+        approval_row = self.approvals._db.execute(
+            "SELECT payload_json,claimed_at FROM pending_action_approvals LIMIT 1"
+        ).fetchone()
+        self.assertEqual(approval_row["payload_json"], "{}")
+        self.assertIsNotNone(approval_row["claimed_at"])
 
         rows = self.sheet("Customers")
         self.assertEqual(len(rows), 2)
@@ -255,6 +260,13 @@ class TelegramAIExcelUATTests(unittest.TestCase):
         cancelled = self.message(8, f"/cancel {token}")
         self.assertIn("cancelled", cancelled)
         self.assertEqual(len(self.sheet("Customers")), 1)
+        approval_row = self.approvals._db.execute(
+            "SELECT payload_json,claimed_at FROM pending_action_approvals LIMIT 1"
+        ).fetchone()
+        self.assertEqual(approval_row["payload_json"], "{}")
+        self.assertIsNotNone(approval_row["claimed_at"])
+        events = [record.event for record in self.store.audit_records("alpha")]
+        self.assertIn("agent.write_cancelled", events)
 
         later = self.message(9, f"/approve {token}")
         self.assertIn("invalid, expired, already used", later)
