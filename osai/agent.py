@@ -30,8 +30,8 @@ from .contracts import (
     PolicyDenied,
     SchemaValidationError,
     ToolExecutor,
-    validate_value,
     ToolResult,
+    validate_value,
 )
 
 
@@ -74,7 +74,7 @@ class ModelProvider(Protocol):
         self,
         *,
         user_message: str,
-        tool_catalog: Sequence["ToolCatalogEntry"],
+        tool_catalog: Sequence[ToolCatalogEntry],
         correlation_id: str,
     ) -> Mapping[str, Any]:
         """Return one strict plan. It never receives trusted execution context."""
@@ -102,7 +102,7 @@ class AnalysisSpec:
     filters: tuple[FilterSpec, ...] = ()
 
     @classmethod
-    def from_mapping(cls, raw: Mapping[str, Any] | None) -> "AnalysisSpec":
+    def from_mapping(cls, raw: Mapping[str, Any] | None) -> AnalysisSpec:
         if raw is None:
             return cls(kind="table")
         allowed = {"kind", "column", "currency_column", "filters"}
@@ -150,7 +150,7 @@ class AgentPlan:
     analysis: AnalysisSpec
 
     @classmethod
-    def from_mapping(cls, raw: Mapping[str, Any]) -> "AgentPlan":
+    def from_mapping(cls, raw: Mapping[str, Any]) -> AgentPlan:
         allowed = {"schema_version", "action", "capability", "arguments", "analysis"}
         if set(raw) != allowed:
             raise AgentPlanInvalid("plan fields are missing or unknown")
