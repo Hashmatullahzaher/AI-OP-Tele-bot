@@ -95,6 +95,20 @@ def check() -> int:
     return 0 if report.ready else 3
 
 
+def serve() -> int:
+    apply_portable_environment()
+    config = config_from_env()
+    startup_check(config)
+    server = build_server(config)
+    try:
+        server.serve_forever(poll_interval=0.25)
+    except KeyboardInterrupt:
+        pass
+    finally:
+        server.server_close()
+    return 0
+
+
 def run_gui() -> int:
     if os.name != "nt":
         print("Portable GUI is supported on Windows only.", file=sys.stderr)
@@ -244,13 +258,15 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="OS-AI-Core-Portable")
     parser.add_argument(
         "command",
-        choices=("run", "check"),
+        choices=("run", "check", "serve"),
         nargs="?",
         default="run",
     )
     args = parser.parse_args(argv)
     if args.command == "check":
         return check()
+    if args.command == "serve":
+        return serve()
     return run_gui()
 
 
