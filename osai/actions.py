@@ -33,6 +33,12 @@ class ActionError(RuntimeError):
     """Base class for sanitized action failures."""
 
 
+class SourceOutcomeUncertain(ActionError):
+    """The source may have committed; reconciliation is required before retry."""
+
+    outcome_uncertain = True
+
+
 class ActionNotAllowed(ActionError):
     """Action or payload is outside the registered F9 contract."""
 
@@ -310,6 +316,17 @@ class ActionJournal:
     ) -> ActionReceipt | None:
         try:
             self._db.execute("BEGIN IMMEDIATE")
+            pending = self._db.execute(
+                """
+                SELECT idempotency_key FROM action_requests
+                WHERE tenant_id=? AND actor_id=? AND action=? AND payload_digest=?
+                  AND status='IN_PROGRESS'
+                LIMIT 1
+                """,
+                (tenant_id, actor_id, action, payload_digest),
+            ).fetchone()
+            if pending is not None and str(pending["idempotency_key"]) != idempotency_key:
+                raise ActionInProgress("matching action is pending reconciliation")
             row = self._db.execute(
                 "SELECT * FROM action_requests WHERE tenant_id=? AND idempotency_key=?",
                 (tenant_id, idempotency_key),
@@ -473,13 +490,30 @@ class ActionCoordinator:
                 context=context,
                 idempotency_key=idempotency_key,
             )
-            _validate_receipt(
-                receipt,
-                definition=definition,
-                context=context,
-                idempotency_key=idempotency_key,
-            )
+            try:
+                _validate_receipt(
+                    receipt,
+                    definition=definition,
+                    context=context,
+                    idempotency_key=idempotency_key,
+                )
+            except Exception as exc:
+                raise SourceOutcomeUncertain(
+                    "source receipt requires reconciliation"
+                ) from exc
         except Exception as exc:
+            if getattr(exc, "outcome_uncertain", False):
+                self.security_store.append_audit(
+                    context=context,
+                    event="action.reconciliation_required",
+                    capability=definition.capability,
+                    resource_scope=f"client_api:{definition.source_alias}",
+                    result="PENDING",
+                    sensitive_payload={"payload_digest": payload_digest},
+                )
+                raise ActionInProgress(
+                    "source outcome is uncertain; reconciliation is required"
+                ) from exc
             self.journal.fail(
                 tenant_id=context.tenant_id,
                 idempotency_key=idempotency_key,
@@ -523,6 +557,9 @@ def _digest(action: str, payload: Mapping[str, JSONValue]) -> str:
     return hashlib.sha256(material.encode("utf-8")).hexdigest()
 
 
+_MONEY_RE = re.compile(r"(?:0|[1-9][0-9]*)(?:\.[0-9]{1,2})?")
+
+
 def _decimal(value: object, *, field: str, allow_zero: bool = True) -> Decimal:
     try:
         parsed = Decimal(str(value))
@@ -533,6 +570,15 @@ def _decimal(value: object, *, field: str, allow_zero: bool = True) -> Decimal:
     if parsed < 0 or (not allow_zero and parsed == 0):
         raise FinancialInvariantError(f"{field} must be positive")
     return parsed.quantize(Decimal("0.01"))
+
+
+def _money_decimal(value: object, *, field: str) -> Decimal:
+    text = str(value)
+    if _MONEY_RE.fullmatch(text) is None:
+        raise FinancialInvariantError(
+            f"{field} must be a non-negative decimal with at most two fractional digits"
+        )
+    return _decimal(text, field=field)
 
 
 def _validate_domain(action: str, payload: Mapping[str, JSONValue]) -> dict[str, JSONValue]:
@@ -561,21 +607,27 @@ def _validate_domain(action: str, payload: Mapping[str, JSONValue]) -> dict[str,
             raise FinancialInvariantError("draft voucher requires at least two entries")
         total_debit = Decimal("0.00")
         total_credit = Decimal("0.00")
+        normalized_entries: list[JSONValue] = []
         for entry in entries:
             if not isinstance(entry, Mapping):
                 raise FinancialInvariantError("voucher entry is invalid")
-            debit = _decimal(entry.get("debit"), field="debit")
-            credit = _decimal(entry.get("credit"), field="credit")
+            debit = _money_decimal(entry.get("debit"), field="debit")
+            credit = _money_decimal(entry.get("credit"), field="credit")
             if debit > 0 and credit > 0:
                 raise FinancialInvariantError("an entry cannot contain both debit and credit")
             if debit == 0 and credit == 0:
                 raise FinancialInvariantError("an entry must contain debit or credit")
             total_debit += debit
             total_credit += credit
+            normalized_entry = dict(entry)
+            normalized_entry["debit"] = format(debit, ".2f")
+            normalized_entry["credit"] = format(credit, ".2f")
+            normalized_entries.append(normalized_entry)
         if total_debit != total_credit or total_debit == 0:
             raise FinancialInvariantError("draft voucher must balance debit and credit")
-        normalized["total_debit"] = format(total_debit, "f")
-        normalized["total_credit"] = format(total_credit, "f")
+        normalized["entries"] = normalized_entries
+        normalized["total_debit"] = format(total_debit, ".2f")
+        normalized["total_credit"] = format(total_credit, ".2f")
         normalized["status"] = "DRAFT"
     return normalized
 
