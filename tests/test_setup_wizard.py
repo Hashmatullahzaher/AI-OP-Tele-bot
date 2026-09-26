@@ -39,7 +39,17 @@ class SetupWizardHttpTests(unittest.TestCase):
         self.worker.join(timeout=5)
         self.tmp.cleanup()
 
-    def request(self, method: str, path: str, body: dict | None = None, *, csrf: str | None = None, origin: str | None = None, host: str | None = None):
+    def request(
+        self,
+        method: str,
+        path: str,
+        body: dict | None = None,
+        *,
+        csrf: str | None = None,
+        access: str | None = None,
+        origin: str | None = None,
+        host: str | None = None,
+    ):
         connection = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
         headers = {}
         if body is not None:
@@ -49,6 +59,8 @@ class SetupWizardHttpTests(unittest.TestCase):
             payload = None
         if csrf is not None:
             headers["X-OSAI-CSRF"] = csrf
+        if access is not None:
+            headers["X-OSAI-Setup-Access"] = access
         if origin is not None:
             headers["Origin"] = origin
         if host is not None:
@@ -69,6 +81,12 @@ class SetupWizardHttpTests(unittest.TestCase):
             raise AssertionError("setup controller was not configured")
         return controller.csrf_token
 
+    def access(self) -> str:
+        controller = self.server.setup_controller
+        if controller is None:
+            raise AssertionError("setup controller was not configured")
+        return controller.access_token
+
     def origin(self) -> str:
         return f"http://127.0.0.1:{self.port}"
 
@@ -76,7 +94,11 @@ class SetupWizardHttpTests(unittest.TestCase):
         status, page = self.request("GET", "/setup")
         self.assertEqual(status, 200)
         self.assertIn("OS AI Core Setup", page)
-        status, payload = self.request("GET", "/api/setup/status")
+        status, payload = self.request(
+            "GET",
+            "/api/setup/status",
+            access=self.access(),
+        )
         self.assertEqual(status, 200)
         self.assertFalse(payload["telegram_token_configured"])
         self.assertFalse(payload["openai_key_configured"])
@@ -99,6 +121,7 @@ class SetupWizardHttpTests(unittest.TestCase):
             "/api/setup/excel/init",
             {},
             csrf=self.csrf(),
+            access=self.access(),
             origin=self.origin(),
         )
         self.assertEqual(status, 200)
@@ -122,7 +145,12 @@ class SetupWizardHttpTests(unittest.TestCase):
             "clear_openai_api_key": False,
         }
         status, response = self.request(
-            "POST", "/api/setup", request, csrf=self.csrf(), origin=self.origin()
+            "POST",
+            "/api/setup",
+            request,
+            csrf=self.csrf(),
+            access=self.access(),
+            origin=self.origin(),
         )
         self.assertEqual(status, 200)
         self.assertTrue(response["telegram_token_configured"])
@@ -132,7 +160,11 @@ class SetupWizardHttpTests(unittest.TestCase):
         self.assertNotIn("123456789:", rendered)
         self.assertNotIn("sk-test-", rendered)
 
-        status, persisted = self.request("GET", "/api/setup/status")
+        status, persisted = self.request(
+            "GET",
+            "/api/setup/status",
+            access=self.access(),
+        )
         self.assertEqual(status, 200)
         self.assertTrue(persisted["telegram_token_configured"])
         self.assertTrue(persisted["openai_key_configured"])
@@ -147,6 +179,7 @@ class SetupWizardHttpTests(unittest.TestCase):
             "/api/setup",
             {"settings": {"excel_enabled": "false", "telegram_enabled": False, "telegram_bot_alias": "primary-bot", "llm_provider": "none"}},
             csrf=self.csrf(),
+            access=self.access(),
             origin=self.origin(),
         )
         self.assertEqual(status, 400)
