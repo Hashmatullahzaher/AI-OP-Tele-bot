@@ -1,0 +1,25 @@
+{
+  "notice": "SYNTHETIC DEMO DATA. No real company or user information.",
+  "tenant": "demo-company",
+  "drive_files": [
+    {"id": "drive-sales-sep", "name": "Sales_September_2026.xlsx", "source": "Simulated Google Drive", "type": "spreadsheet", "rows": [
+      {"date": "2026-09-03", "customer": "Demo Customer A", "category": "Books", "amount_afn": "12500"},
+      {"date": "2026-09-07", "customer": "Demo Customer B", "category": "Stationery", "amount_afn": "8400"},
+      {"date": "2026-09-11", "customer": "Demo Customer C", "category": "Books", "amount_afn": "16000"},
+      {"date": "2026-09-20", "customer": "Demo Customer D", "category": "Stationery", "amount_afn": "7100"}
+    ]},
+    {"id": "drive-expenses-sep", "name": "Expenses_September_2026.xlsx", "source": "Simulated Google Drive", "type": "spreadsheet", "rows": [
+      {"date": "2026-09-04", "category": "Office", "amount_afn": "4300"},
+      {"date": "2026-09-12", "category": "Transport", "amount_afn": "6100"},
+      {"date": "2026-09-22", "category": "Utilities", "amount_afn": "2200"}
+    ]}
+  ],
+  "erp_projects": [
+    {"id": "P-101", "name": "Demo North Plaza", "budget_afn": "800000", "spent_afn": "315000", "status": "Active"},
+    {"id": "P-102", "name": "Demo Warehouse", "budget_afn": "450000", "spent_afn": "172500", "status": "Active"}
+  ],
+  "erp_accounts": [
+    {"code": "1000", "name": "Cash", "debit_afn": "320000", "credit_afn": "0"},
+    {"code": "2000", "name": "Accounts payable", "debit_afn": "0", "credit_afn": "92000"}
+  ]
+}

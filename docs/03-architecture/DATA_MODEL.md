@@ -1,0 +1,7 @@
+# Candidate data model and isolation rules
+
+`Tenant(id, plan, retention_policy)`; `Deployment(id, tenant_id, profile, version)`; `IdentityLink(tenant_id, user_id, channel, channel_user_id, status, verified_at)`; `RoleGrant(tenant_id, user_id, capability, resource_scope)`; `ConnectorInstance(tenant_id, connector_id, type, config_version, state)`; `CredentialRef(tenant_id, connector_id, secret_store_ref)`; `SourceResource(tenant_id, connector_id, source_id, acl_snapshot, revision)`; `CapabilityDefinition(name, version, input/output_schema, read_write_class)`; `ConversationSession(tenant_id, actor_id, channel, classification)`; `ToolInvocation(tenant_id, actor_id, capability, source_scope, correlation_id, result)`; `ReportArtifact(tenant_id, actor_id, source_revisions, expires_at)`; `AuditEvent(tenant_id, actor_id, event, immutable_timestamp, correlation_id)`.
+
+All tenant-owned tables use compound (tenant_id, object_id) ownership keys and tenant-scoped uniqueness/foreign-key integrity; never depend on a single global object ID FK to infer tenant. Every query and cache key includes tenant scope. Cross-tenant access is negative-tested. Source credentials live only in secret storage, not DB plain text. Posted ERP journal entries remain exclusively under the source ERP schema/domain.
+
+Retention, encryption, artifact storage, exact schema migrations and immutable audit implementation remain subject to owner/privacy decisions and threat review before using live customer data.
