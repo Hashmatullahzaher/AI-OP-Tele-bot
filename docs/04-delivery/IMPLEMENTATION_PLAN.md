@@ -1,6 +1,6 @@
 # Ordered delivery plan (App Maker)
 
-**Current stage: F9 permissioned actions + Windows-first Excel sandbox UAT.** F0–F8 builder slices exist with green CI handoffs on their exact SHAs; provider/source live E2E gates remain tracked in OPEN_ITEMS. Before connecting a real customer write API, the owner requested an end-to-end local XLSX sandbox using the same four F9 mutations.
+**Current stage: Telegram orchestration over the Windows-first Excel sandbox UAT.** The direct F9-to-XLSX path is already proven. The current slice routes paired Telegram text through a provider-neutral write planner, requires a separate payload-bound approval, and then executes the same four F9 mutations against the Excel sandbox. Live Telegram and live LLM credentials remain gated.
 
 Milestones:
 
@@ -15,7 +15,7 @@ Milestones:
 - **F8 — Dual deployment:** same core for cloud/local, readiness and backup/restore. First UAT host is now Windows PC / Windows Server; production certification details remain O-08.
 - **F9 — Permissioned writes:** current owner-approved scope is customer create/update, procurement request create and **draft voucher create only**. Every write requires explicit capability authorization, deterministic domain validation, step-up approval, idempotency, source actor/tenant authorization and durable audit. Posted voucher mutation remains prohibited.
 
-**Excel UAT harness (owner-sanctioned, not a new production milestone):** local typed XLSX reads plus a controlled workbook source adapter exercise customer create/update, procurement request create and draft-voucher create on Windows. This harness must preserve F9 authorization, approval, idempotency and audit semantics and must not be represented as a production database.
+**Excel UAT harness (owner-sanctioned, not a new production milestone):** local typed XLSX reads plus a controlled workbook source adapter exercise customer create/update, procurement request create and draft-voucher create on Windows. The next UAT layer starts from Telegram ingress, lets only the provider-neutral planner propose a registered action, shows the complete normalized payload, and requires a separate short-lived same-actor approval before mutation. The CI planner is synthetic, not a live LLM.
 
 For each milestone:
 
