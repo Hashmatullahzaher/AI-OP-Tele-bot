@@ -150,6 +150,16 @@ class PermissionedWriteAgent:
             action=plan.capability,
             payload=plan.arguments,
         )
+        review_json = json.dumps(
+            dict(prepared.normalized_payload),
+            ensure_ascii=False,
+            sort_keys=True,
+            indent=2,
+        )
+        if len(review_json) > 2_600:
+            raise WritePlanInvalid(
+                "write proposal is too large for complete Telegram review"
+            )
         pending = self.approval_store.issue(
             context=scoped,
             prepared=prepared,
