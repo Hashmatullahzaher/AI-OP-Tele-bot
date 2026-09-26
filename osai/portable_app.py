@@ -22,7 +22,7 @@ from .runtime import build_server, config_from_env, readiness_from_env, startup_
 from .setup_wizard import setup_access_token_for_runtime
 
 APP_NAME = "OS AI Core Portable"
-DEFAULT_PORT = "8765"
+DEFAULT_PORT = "8766"
 
 
 def portable_data_root(env: MutableMapping[str, str] | None = None) -> Path:
