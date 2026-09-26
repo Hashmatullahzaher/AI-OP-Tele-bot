@@ -23,7 +23,6 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
-from typing import Any
 from xml.sax.saxutils import escape as xml_escape
 
 from ..actions import ActionReceipt
