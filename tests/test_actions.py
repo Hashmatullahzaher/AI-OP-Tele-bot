@@ -5,6 +5,7 @@ from pathlib import Path
 from osai.actions import (
     ActionCoordinator,
     ActionError,
+    ActionInProgress,
     ActionJournal,
     ActionNotAllowed,
     ActionReceipt,
@@ -21,6 +22,7 @@ from osai.connectors.rest_write import (
     WriteOperation,
     WriteOperationNotAllowed,
     WriteSource,
+    WriteUnavailable,
 )
 from osai.contracts import ExecutionContext, PolicyDenied
 from osai.storage import TenantSecurityStore
@@ -34,9 +36,12 @@ class FakeAdapter:
         self.calls = []
         self.override_actor = None
         self.override_state = None
+        self.failure = None
 
     def execute(self, *, action, payload, context, idempotency_key):
         self.calls.append((action, dict(payload), context, idempotency_key))
+        if self.failure is not None:
+            raise self.failure
         states = {
             "customer.create": "CREATED",
             "customer.update": "UPDATED",
@@ -201,6 +206,10 @@ class ActionTests(unittest.TestCase):
         )
         self.assertEqual(receipt.source_state, "DRAFT")
         sent = self.adapter.calls[0][1]
+        self.assertEqual(sent["entries"][0]["debit"], "1000.00")
+        self.assertEqual(sent["entries"][0]["credit"], "0.00")
+        self.assertEqual(sent["entries"][1]["debit"], "0.00")
+        self.assertEqual(sent["entries"][1]["credit"], "1000.00")
         self.assertEqual(sent["total_debit"], "1000.00")
         self.assertEqual(sent["total_credit"], "1000.00")
         self.assertEqual(sent["status"], "DRAFT")
@@ -235,9 +244,25 @@ class ActionTests(unittest.TestCase):
             )
         self.assertEqual(self.adapter.calls, [])
 
-    def test_posted_voucher_state_from_source_is_rejected(self):
-        self.adapter.override_state = "POSTED"
+    def test_voucher_rejects_more_than_two_decimal_places_before_source(self):
         with self.assertRaises(FinancialInvariantError):
+            self.execute(
+                "finance.draft_voucher.create",
+                {
+                    "voucher_date": "2026-09-26",
+                    "currency": "AFN",
+                    "description": "Precision mismatch",
+                    "entries": [
+                        {"account_code": "6100", "debit": "100.004", "credit": "0"},
+                        {"account_code": "1100", "debit": "0", "credit": "100.00"},
+                    ],
+                },
+            )
+        self.assertEqual(self.adapter.calls, [])
+
+    def test_posted_voucher_state_requires_reconciliation(self):
+        self.adapter.override_state = "POSTED"
+        with self.assertRaises(ActionInProgress):
             self.execute(
                 "finance.draft_voucher.create",
                 {
@@ -251,12 +276,29 @@ class ActionTests(unittest.TestCase):
                 },
             )
 
-    def test_source_must_confirm_same_authorized_actor(self):
+    def test_source_receipt_mismatch_requires_reconciliation_and_blocks_new_key(self):
         self.adapter.override_actor = "someone-else"
-        with self.assertRaises(PolicyDenied):
-            self.execute("customer.create", {"name": "A", "customer_type": "COMPANY"})
-        with self.assertRaises(ActionError):
-            self.execute("customer.create", {"name": "A", "customer_type": "COMPANY"})
+        payload = {"name": "A", "customer_type": "COMPANY"}
+        with self.assertRaises(ActionInProgress):
+            self.execute("customer.create", payload)
+        with self.assertRaises(ActionInProgress):
+            self.execute("customer.create", payload, key="idem:87654321")
+        self.assertEqual(len(self.adapter.calls), 1)
+        self.assertIn(
+            "action.reconciliation_required",
+            [item.event for item in self.store.audit_records("alpha")],
+        )
+
+    def test_uncertain_source_failure_blocks_same_mutation_under_new_key(self):
+        self.adapter.failure = WriteUnavailable("timeout after dispatch")
+        payload = {"name": "A", "customer_type": "COMPANY"}
+        with self.assertRaises(ActionInProgress):
+            self.execute("customer.create", payload)
+        with self.assertRaises(ActionInProgress):
+            self.execute("customer.create", payload, key="idem:87654321")
+        self.assertEqual(len(self.adapter.calls), 1)
+        events = [item.event for item in self.store.audit_records("alpha")]
+        self.assertIn("action.reconciliation_required", events)
 
     def test_unregistered_post_or_delete_action_is_impossible(self):
         with self.assertRaises(ActionNotAllowed):
