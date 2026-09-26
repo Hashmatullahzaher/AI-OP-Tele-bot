@@ -339,7 +339,9 @@ class ActionJournal:
             if not isinstance(receipt_raw, str):
                 raise ActionError("completed action receipt is unavailable")
             data = json.loads(receipt_raw)
-            return ActionReceipt(**data)
+            receipt = ActionReceipt(**data)
+            self._db.commit()
+            return receipt
         except Exception:
             self._db.rollback()
             raise
@@ -595,7 +597,7 @@ def _validate_receipt(
         raise ActionError("source did not confirm idempotency key")
     if not receipt.source_record_id.strip():
         raise ActionError("source receipt is missing record id")
-    if receipt.source_state not in definition.required_source_states:
-        raise ActionError("source returned a disallowed state")
     if definition.action == "finance.draft_voucher.create" and receipt.source_state != "DRAFT":
         raise FinancialInvariantError("voucher source state must remain DRAFT")
+    if receipt.source_state not in definition.required_source_states:
+        raise ActionError("source returned a disallowed state")
