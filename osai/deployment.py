@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Iterable
 
 _ALLOWED_EXTERNAL = frozenset({"telegram", "google_drive", "client_api", "llm"})
 
