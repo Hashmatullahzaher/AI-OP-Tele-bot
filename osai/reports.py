@@ -478,7 +478,7 @@ def _atomic_write(path: Path, payload: bytes) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     fd, tmp_name = tempfile.mkstemp(prefix=".report-", dir=str(path.parent))
     try:
-        os.fchmod(fd, 0o600)
+        os.chmod(tmp_name, 0o600)
         with os.fdopen(fd, "wb") as handle:
             handle.write(payload)
             handle.flush()
