@@ -23,7 +23,7 @@ import urllib.request
 from collections.abc import Mapping
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Any, Protocol
+from typing import Any, NoReturn, Protocol
 
 from ..contracts import ExecutionContext, PolicyDenied
 from ..storage import TenantSecurityStore
@@ -188,9 +188,23 @@ class TelegramIngress:
         now = _now_epoch() if now_epoch is None else now_epoch
         if now < 0:
             raise TelegramAccessDenied("telegram request denied")
+        _validate_bot_alias(bot_alias)
         self._verify_webhook_secret(bot_alias, headers)
         update = self._parse_update(body)
         update_id = _required_int(update, "update_id", minimum=0)
+        try:
+            self.store.claim_telegram_update(
+                bot_alias=bot_alias,
+                update_id=update_id,
+                received_at=now,
+            )
+        except PolicyDenied as exc:
+            self.security_sink.emit(
+                event="telegram.replay_denied",
+                metadata={"bot_alias": bot_alias, "update_id": update_id},
+            )
+            raise TelegramAccessDenied("telegram update replayed") from exc
+
         message = update.get("message")
         if not isinstance(message, Mapping):
             self._deny("telegram.unsupported_update", bot_alias, update_id)
@@ -209,19 +223,6 @@ class TelegramIngress:
         clean_text = text.strip()
         if not clean_text or len(clean_text) > self.max_text_chars:
             self._deny("telegram.invalid_text", bot_alias, update_id)
-
-        try:
-            self.store.claim_telegram_update(
-                bot_alias=bot_alias,
-                update_id=update_id,
-                received_at=now,
-            )
-        except PolicyDenied as exc:
-            self.security_sink.emit(
-                event="telegram.replay_denied",
-                metadata={"bot_alias": bot_alias, "update_id": update_id},
-            )
-            raise TelegramAccessDenied("telegram update replayed") from exc
 
         pairing = self._PAIR_RE.fullmatch(clean_text)
         if pairing is not None:
@@ -332,7 +333,7 @@ class TelegramIngress:
             raise TelegramAccessDenied("telegram request denied")
         return parsed
 
-    def _deny(self, event: str, bot_alias: str, update_id: int) -> None:
+    def _deny(self, event: str, bot_alias: str, update_id: int) -> NoReturn:
         self.security_sink.emit(
             event=event,
             metadata={"bot_alias": bot_alias, "update_id": update_id},
@@ -346,20 +347,41 @@ class TelegramSender:
     def __init__(
         self,
         *,
+        store: TenantSecurityStore,
         token_provider: BotTokenProvider,
         transport: TelegramTransport | None = None,
         timeout_seconds: int = 20,
     ) -> None:
         if timeout_seconds < 1 or timeout_seconds > 60:
             raise ValueError("timeout_seconds out of range")
+        self.store = store
         self.token_provider = token_provider
         self.transport = transport or UrllibTelegramTransport()
         self.timeout_seconds = timeout_seconds
 
-    def send_text(self, *, bot_alias: str, chat_id: int, text: str) -> int:
+    def send_text(
+        self,
+        *,
+        context: ExecutionContext,
+        bot_alias: str,
+        chat_id: int,
+        telegram_user_id: int,
+        text: str,
+    ) -> int:
+        _validate_bot_alias(bot_alias)
         clean = text.strip()
-        if chat_id <= 0 or not clean or len(clean) > 4_096:
+        if chat_id <= 0 or telegram_user_id <= 0 or not clean or len(clean) > 4_096:
             raise TelegramAccessDenied("telegram outbound message denied")
+        try:
+            binding = self.store.resolve_telegram_binding(
+                bot_alias=bot_alias,
+                telegram_user_id=telegram_user_id,
+                chat_id=chat_id,
+            )
+        except PolicyDenied as exc:
+            raise TelegramAccessDenied("telegram outbound identity unavailable") from exc
+        if binding.tenant_id != context.tenant_id or binding.actor_id != context.actor_id:
+            raise TelegramAccessDenied("telegram outbound identity unavailable")
         token = self.token_provider.bot_token(bot_alias=bot_alias)
         if not re.fullmatch(r"[0-9]{1,20}:[A-Za-z0-9_-]{20,200}", token):
             raise TelegramAccessDenied("telegram bot credential unavailable")
@@ -383,6 +405,11 @@ class TelegramSender:
         if isinstance(message_id, bool) or not isinstance(message_id, int) or message_id <= 0:
             raise TelegramUnavailable("telegram send returned invalid message id")
         return message_id
+
+
+def _validate_bot_alias(bot_alias: str) -> None:
+    if not re.fullmatch(r"[a-z][a-z0-9_-]{2,63}", bot_alias):
+        raise TelegramAccessDenied("telegram bot unavailable")
 
 
 def _required_int(source: Mapping[str, Any], key: str, *, minimum: int) -> int:
