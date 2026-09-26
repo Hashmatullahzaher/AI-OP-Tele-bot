@@ -12,7 +12,6 @@ from osai.channels.telegram import (
 )
 from osai.storage import TenantSecurityStore
 
-
 BOT_ALIAS = "pilot-bot"
 WEBHOOK_SECRET = "webhook_secret_123"
 BOT_TOKEN = "123456:ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcd"
