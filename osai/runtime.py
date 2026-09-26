@@ -116,7 +116,12 @@ def startup_check(config: RuntimeConfig) -> None:
         pass
 
 
+class _RuntimeServer(ThreadingHTTPServer):
+    setup_controller: SetupWebController | None
+
+
 class _HealthHandler(BaseHTTPRequestHandler):
+    server: _RuntimeServer
     server_version = "OSAIHealth/0.1"
 
     def do_GET(self) -> None:  # noqa: N802
@@ -197,7 +202,7 @@ class _HealthHandler(BaseHTTPRequestHandler):
         self._json(200, result)
 
     def _setup_controller(self) -> SetupWebController | None:
-        return getattr(self.server, "setup_controller", None)
+        return self.server.setup_controller
 
     def _trusted_loopback_host(self) -> bool:
         host = self.headers.get("Host", "").casefold().strip()
@@ -253,15 +258,15 @@ class _HealthHandler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
 
-def build_server(config: RuntimeConfig) -> ThreadingHTTPServer:
-    server = ThreadingHTTPServer((config.bind_host, config.port), _HealthHandler)
+def build_server(config: RuntimeConfig) -> _RuntimeServer:
+    server = _RuntimeServer((config.bind_host, config.port), _HealthHandler)
     controller: SetupWebController | None = None
     if config.profile == "local" and (config.secret_backend == "test" or os.name == "nt"):
         controller = SetupWebController(
             config=config,
             manager=setup_manager_for_runtime(config),
         )
-    setattr(server, "setup_controller", controller)
+    server.setup_controller = controller
     return server
 
 
