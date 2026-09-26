@@ -215,9 +215,21 @@ class PermissionedWriteAgent:
     ) -> None:
         scoped = self._context(context)
         try:
+            pending = self.approval_store.resolve(
+                context=scoped,
+                approval_ref=approval_ref,
+            )
             self.approval_store.cancel(
                 context=scoped,
                 approval_ref=approval_ref,
             )
         except PendingApprovalUnavailable as exc:
             raise WriteAgentError("APPROVAL_UNAVAILABLE", "approval is invalid or expired") from exc
+        self.audit_sink.append_audit(
+            context=scoped,
+            event="agent.write_cancelled",
+            capability=pending.action,
+            resource_scope=self.source_scope,
+            result="CANCELLED",
+            sensitive_payload={"payload_digest": pending.payload_digest},
+        )
