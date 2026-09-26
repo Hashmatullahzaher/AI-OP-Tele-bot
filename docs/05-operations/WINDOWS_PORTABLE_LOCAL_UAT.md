@@ -19,7 +19,7 @@ The owner requested a second local Windows path that does not depend on the Wind
 Portable mode intentionally uses:
 
 - loopback only: 127.0.0.1;
-- port 8766, so it can coexist with the installed Windows Service UAT on port 8765;
+- no fixed port: Windows allocates a free loopback port at launch; ports 8765 and 8766 are explicitly reserved and never used by Portable;
 - per-user data root: %LOCALAPPDATA%\OS AI Core Portable;
 - offline dependency mode by default;
 - the same runtime, setup validation, Excel sandbox, and secret-store contracts as the installed local mode.
@@ -41,7 +41,7 @@ Windows CI must:
 2. build the one-file executable with PyInstaller;
 3. execute the bundled check command;
 4. start the bundled executable in headless serve mode;
-5. verify /healthz, the real operator Dashboard, and Setup Wizard on port 8766;
+5. discover the runtime-selected port from the per-user state file and verify /healthz, the real operator Dashboard, and Setup Wizard on that port;
 6. verify the SQLite database is created under LocalAppData;
 7. upload the portable EXE as a short-lived artifact.
 
