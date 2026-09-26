@@ -65,7 +65,7 @@ class SetupSettings:
     local_llm_base_url: str | None = None
 
     @classmethod
-    def from_mapping(cls, raw: Mapping[str, Any]) -> "SetupSettings":
+    def from_mapping(cls, raw: Mapping[str, Any]) -> SetupSettings:
         allowed = {
             "excel_enabled",
             "excel_workbook_path",
