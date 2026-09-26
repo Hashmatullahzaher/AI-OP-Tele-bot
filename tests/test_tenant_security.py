@@ -57,6 +57,35 @@ class TenantSecurityTests(unittest.TestCase):
         self.store.close()
         self.tmp.cleanup()
 
+
+    def test_platform_operator_is_separated_from_tenant_data_roles(self):
+        self.store.add_actor("alpha", "ops-1", role="PLATFORM_OPERATOR")
+        operator = ExecutionContext.issue(
+            tenant_id="alpha",
+            actor_id="ops-1",
+            resource_scope=("drive:pilot",),
+        )
+        with self.assertRaises(PolicyDenied):
+            self.store.grant("alpha", "ops-1", "drive.sheet.read", "drive:pilot")
+        self.store.put_scoped(tenant_id="alpha", kind="report", object_id="r-ops", payload={"secret": True})
+        with self.assertRaises(PolicyDenied):
+            self.store.get_scoped(
+                context=operator,
+                owner_tenant_id="alpha",
+                kind="report",
+                object_id="r-ops",
+            )
+
+    def test_tenant_admin_role_can_receive_explicit_tenant_grants(self):
+        self.store.add_actor("alpha", "tenant-admin", role="TENANT_ADMIN")
+        admin = ExecutionContext.issue(
+            tenant_id="alpha",
+            actor_id="tenant-admin",
+            resource_scope=("drive:pilot",),
+        )
+        self.store.grant("alpha", "tenant-admin", "drive.sheet.read", "drive:pilot")
+        self.store.authorize(admin, manifest())
+
     def test_policy_allows_exact_tenant_scope(self):
         self.store.authorize(self.alpha, manifest())
 
