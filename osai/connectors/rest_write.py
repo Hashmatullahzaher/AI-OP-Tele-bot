@@ -158,7 +158,7 @@ class UrllibWriteTransport:
     """HTTPS-only mutation transport with redirects disabled."""
 
     class _NoRedirect(urllib.request.HTTPRedirectHandler):
-        def redirect_request(self, req, fp, code, msg, headers, newurl):  # type: ignore[no-untyped-def]
+        def redirect_request(self, req, fp, code, msg, headers, newurl):
             raise WriteHTTPError(code, "redirect refused")
 
     def __init__(self, *, allowed_hostname: str) -> None:
