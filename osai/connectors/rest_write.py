@@ -33,11 +33,15 @@ class WriteOperationNotAllowed(WriteConnectorError):
 
 
 class WriteUnavailable(WriteConnectorError):
-    """Source system is unavailable or returned a transient failure."""
+    """Source outcome may be unknown after dispatch; reconciliation is required."""
+
+    outcome_uncertain = True
 
 
 class WriteSchemaInvalid(WriteConnectorError):
-    """Source mutation receipt does not match the configured contract."""
+    """Source may have committed but returned an unusable receipt."""
+
+    outcome_uncertain = True
 
 
 class WriteHTTPError(RuntimeError):
