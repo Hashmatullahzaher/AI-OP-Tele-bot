@@ -163,6 +163,7 @@ class PermissionedWriteAgent:
         pending = self.approval_store.issue(
             context=scoped,
             prepared=prepared,
+            request_payload=plan.arguments,
         )
         self.audit_sink.append_audit(
             context=scoped,
