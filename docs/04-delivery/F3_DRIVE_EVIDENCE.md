@@ -3,7 +3,7 @@
 Status: **IMPLEMENTED TO CREDENTIAL BOUNDARY; LIVE APP-OAUTH E2E BLOCKED ONLY BY O-02**.
 
 Branch: `app-maker/f3-drive-readonly`
-Base SHA: `faf45ce316b1a6fbcdca25992c49d252259318a6`
+Base SHA: `b61d1e75a2c830bfaca4b0277c29d6bfa3006a35`
 
 ## Implemented
 
@@ -26,7 +26,7 @@ Base SHA: `faf45ce316b1a6fbcdca25992c49d252259318a6`
 ```text
 python -m compileall -q osai tests
 python -m unittest discover -s tests -v
-RESULT: 41/41 PASS
+RESULT: 43/43 PASS
 ```
 
 New negative tests cover raw-file-ID attempts, mismatched resource scope, parent-folder change, source ACL revocation, MIME mismatch, duplicate/blank headers, XLSX size/row limits and non-execution of formula text.

@@ -57,7 +57,7 @@ def context(alias="pilot-finance-sheet"):
     )
 
 
-def sheet_resource(*, parent="folder-1"):
+def sheet_resource(*, parent="folder-1", mime=GOOGLE_SHEET_MIME):
     return DriveResource(
         alias="pilot-finance-sheet",
         file_id="sheet-123",

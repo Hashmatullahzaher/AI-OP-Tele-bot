@@ -1,6 +1,6 @@
 # Ordered delivery plan (App Maker)
 
-**Current stage: F3 Google Drive read-only implementation.** F0/F1 exact SHA `faf45ce316b1a6fbcdca25992c49d252259318a6` has green CI and passed lead-agent contract review with nonblocking notes. The isolated browser demo is not production evidence.
+**Current stage: F3 Google Drive read-only implementation.** F0/F1 initial SHA `faf45ce316b1a6fbcdca25992c49d252259318a6` failed one acceptance detail (operator-vs-tenant role separation). Remediation SHA `b61d1e75a2c830bfaca4b0277c29d6bfa3006a35` adds explicit roles and passed GitHub Actions run `36217089400`. The isolated browser demo is not production evidence.
 
 Milestones:
 
