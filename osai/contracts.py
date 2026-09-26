@@ -15,7 +15,6 @@ from datetime import UTC, datetime
 from decimal import Decimal
 from typing import Any, Protocol
 
-
 JSONScalar = str | int | float | bool | None
 JSONValue = JSONScalar | list["JSONValue"] | dict[str, "JSONValue"]
 
