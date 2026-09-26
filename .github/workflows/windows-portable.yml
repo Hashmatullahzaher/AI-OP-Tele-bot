@@ -29,8 +29,8 @@ jobs:
         shell: pwsh
         run: |
           $env:LOCALAPPDATA = "$env:RUNNER_TEMP\portable-localappdata"
-          & ".\dist\OS-AI-Core-Portable.exe" check
-          if ($LASTEXITCODE -ne 0) { throw "Portable runtime check failed." }
+          $check = Start-Process -FilePath ".\dist\OS-AI-Core-Portable.exe" -ArgumentList "check" -Wait -PassThru
+          if ($check.ExitCode -ne 0) { throw "Portable runtime check failed with code $($check.ExitCode)." }
       - name: Smoke bundled portable localhost runtime
         shell: pwsh
         run: |
