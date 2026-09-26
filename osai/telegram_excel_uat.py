@@ -152,6 +152,10 @@ def _approval_ref(response: str) -> str:
     return match.group(1)
 
 
+def _redact_approval_refs(text: str) -> str:
+    return re.sub(r"tg:[A-Za-z0-9_-]{20,200}", "tg:<redacted>", text)
+
+
 def run(workbook_path: Path, database_path: Path) -> dict[str, Any]:
     initialize_excel_sandbox(workbook_path)
     if database_path.exists():
@@ -227,7 +231,9 @@ def run(workbook_path: Path, database_path: Path) -> dict[str, Any]:
             )
             proposal = bridge.handle(proposal_ingress)
             approval_ref = _approval_ref(proposal)
-            transcript.append({"user": user_message, "system": proposal})
+            transcript.append(
+                {"user": user_message, "system": _redact_approval_refs(proposal)}
+            )
 
             update_id += 1
             approval_message = f"/approve {approval_ref}"
@@ -238,7 +244,12 @@ def run(workbook_path: Path, database_path: Path) -> dict[str, Any]:
                 now_epoch=now + update_id,
             )
             completed = bridge.handle(approval_ingress)
-            transcript.append({"user": approval_message, "system": completed})
+            transcript.append(
+                {
+                    "user": "/approve tg:<redacted>",
+                    "system": _redact_approval_refs(completed),
+                }
+            )
             if "CHANGE COMPLETED" not in completed:
                 raise RuntimeError("Telegram Excel UAT mutation did not complete")
             update_id += 1
