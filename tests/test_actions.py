@@ -4,7 +4,6 @@ from pathlib import Path
 
 from osai.actions import (
     ActionCoordinator,
-    ActionError,
     ActionInProgress,
     ActionJournal,
     ActionNotAllowed,
