@@ -318,25 +318,34 @@ def analyze_tool_result(
 
     columns_raw = result.data.get("columns")
     rows_raw = result.data.get("rows")
-    if not isinstance(columns_raw, list) or not all(isinstance(value, str) for value in columns_raw):
+    if not isinstance(columns_raw, list):
         raise AgentError("SOURCE_SCHEMA_AMBIGUOUS", "tool result does not expose table columns")
-    if not isinstance(rows_raw, list) or not all(isinstance(row, list) for row in rows_raw):
-        raise AgentError("SOURCE_SCHEMA_AMBIGUOUS", "tool result does not expose table rows")
-    columns = cast(list[str], columns_raw)
+    column_values = cast(list[Any], columns_raw)
+    if not all(isinstance(value, str) for value in column_values):
+        raise AgentError("SOURCE_SCHEMA_AMBIGUOUS", "tool result does not expose table columns")
+    columns = cast(list[str], column_values)
     if not columns or len(columns) != len(set(columns)):
         raise AgentError("SOURCE_SCHEMA_AMBIGUOUS", "tool result columns are ambiguous")
+
+    if not isinstance(rows_raw, list):
+        raise AgentError("SOURCE_SCHEMA_AMBIGUOUS", "tool result does not expose table rows")
+    row_values = cast(list[Any], rows_raw)
     rows: list[list[str]] = []
-    for row in rows_raw:
-        if len(row) != len(columns) or not all(isinstance(value, str) for value in row):
+    for raw_row in row_values:
+        if not isinstance(raw_row, list):
             raise AgentError("SOURCE_SCHEMA_AMBIGUOUS", "tool result row shape is invalid")
-        rows.append(cast(list[str], row))
+        raw_cells = cast(list[Any], raw_row)
+        if len(raw_cells) != len(columns) or not all(isinstance(value, str) for value in raw_cells):
+            raise AgentError("SOURCE_SCHEMA_AMBIGUOUS", "tool result row shape is invalid")
+        rows.append(cast(list[str], raw_cells))
+
     index = {name: offset for offset, name in enumerate(columns)}
     filtered = rows
     for filter_spec in analysis.filters:
         if filter_spec.column not in index:
             raise AgentError("SOURCE_SCHEMA_AMBIGUOUS", "analysis filter column is absent")
         offset = index[filter_spec.column]
-        filtered = [row for row in filtered if row[offset] == filter_spec.equals]
+        filtered = [filtered_row for filtered_row in filtered if filtered_row[offset] == filter_spec.equals]
 
     if analysis.kind == "table":
         data: dict[str, JSONValue] = {
@@ -348,15 +357,15 @@ def analyze_tool_result(
         return data, f"Retrieved {len(filtered)} source row(s)."
 
     if analysis.kind == "count":
-        data = {"kind": "count", "count": len(filtered)}
-        return data, f"Count = {len(filtered)}."
+        count_data: dict[str, JSONValue] = {"kind": "count", "count": len(filtered)}
+        return count_data, f"Count = {len(filtered)}."
 
     if analysis.column is None or analysis.column not in index:
         raise AgentError("SOURCE_SCHEMA_AMBIGUOUS", "sum column is absent")
     amount_offset = index[analysis.column]
     total = Decimal("0")
-    for row in filtered:
-        raw = row[amount_offset].strip()
+    for filtered_row in filtered:
+        raw = filtered_row[amount_offset].strip()
         if not raw:
             continue
         try:
@@ -369,14 +378,18 @@ def analyze_tool_result(
         if analysis.currency_column not in index:
             raise AgentError("SOURCE_SCHEMA_AMBIGUOUS", "currency column is absent")
         currency_offset = index[analysis.currency_column]
-        currencies = {row[currency_offset].strip() for row in filtered if row[currency_offset].strip()}
+        currencies = {
+            filtered_row[currency_offset].strip()
+            for filtered_row in filtered
+            if filtered_row[currency_offset].strip()
+        }
         if len(currencies) > 1:
             raise AgentError("SOURCE_SCHEMA_AMBIGUOUS", "financial sum spans multiple currencies")
         if currencies:
             currency = next(iter(currencies))
 
     amount = _decimal_text(total)
-    data = {
+    sum_data: dict[str, JSONValue] = {
         "kind": "sum",
         "column": analysis.column,
         "amount": amount,
@@ -384,8 +397,7 @@ def analyze_tool_result(
         "matched_rows": len(filtered),
     }
     suffix = f" {currency}" if currency else ""
-    return data, f"Sum of {analysis.column} = {amount}{suffix} across {len(filtered)} matching row(s)."
-
+    return sum_data, f"Sum of {analysis.column} = {amount}{suffix} across {len(filtered)} matching row(s)."
 
 def _decimal_text(value: Decimal) -> str:
     normalized = value.normalize()
