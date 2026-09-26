@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import socket
 import tempfile
 import threading
 import unittest
@@ -25,12 +26,16 @@ class WindowsPackagingContractTests(unittest.TestCase):
         self.assertFalse(any("TOKEN" in key or "API_KEY" in key for key in env))
 
     def test_operator_dashboard_is_served_by_real_runtime(self) -> None:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as port_probe:
+            port_probe.bind(("127.0.0.1", 0))
+            port = int(port_probe.getsockname()[1])
+
         with tempfile.TemporaryDirectory() as temp_dir:
             config = RuntimeConfig.from_mapping(
                 {
                     "profile": "local",
                     "bind_host": "127.0.0.1",
-                    "port": 0,
+                    "port": port,
                     "database_path": str(Path(temp_dir) / "osai.sqlite3"),
                     "secret_backend": "test",
                     "outbound_hosts": [],
@@ -40,7 +45,6 @@ class WindowsPackagingContractTests(unittest.TestCase):
             worker = threading.Thread(target=server.serve_forever, daemon=True)
             worker.start()
             try:
-                port = server.server_address[1]
                 with urllib.request.urlopen(f"http://127.0.0.1:{port}/", timeout=5) as response:
                     body = response.read().decode("utf-8")
                     self.assertIn("Local Operator Dashboard", body)
