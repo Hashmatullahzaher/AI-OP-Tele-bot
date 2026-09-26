@@ -211,6 +211,8 @@ class UrllibWriteTransport:
             raise WriteHTTPError(exc.code) from exc
         except urllib.error.URLError as exc:
             raise WriteUnavailable("source system unavailable") from exc
+        except (TimeoutError, OSError) as exc:
+            raise WriteUnavailable("source outcome is uncertain") from exc
         if len(raw) > max_response_bytes:
             raise WriteSchemaInvalid("source response exceeded configured limit")
         try:
