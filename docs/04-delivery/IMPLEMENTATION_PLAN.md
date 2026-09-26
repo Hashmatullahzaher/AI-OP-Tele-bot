@@ -1,6 +1,6 @@
 # Ordered delivery plan (App Maker)
 
-**Current stage: Telegram orchestration over the Windows-first Excel sandbox UAT.** The direct F9-to-XLSX path is already proven. The current slice routes paired Telegram text through a provider-neutral write planner, requires a separate payload-bound approval, and then executes the same four F9 mutations against the Excel sandbox. Live Telegram and live LLM credentials remain gated.
+**Current stage: Windows installable Setup Wizard over the proven Excel/Telegram orchestration UAT.** The installer now exposes a loopback-only configuration surface that can create the managed Excel workbook and securely store Telegram/OpenAI credentials using Windows DPAPI. Live Telegram/LLM network activation remains gated by O-04/O-05.
 
 Milestones:
 
@@ -15,7 +15,7 @@ Milestones:
 - **F8 — Dual deployment:** same core for cloud/local, readiness and backup/restore. First UAT host is now Windows PC / Windows Server; production certification details remain O-08.
 - **F9 — Permissioned writes:** current owner-approved scope is customer create/update, procurement request create and **draft voucher create only**. Every write requires explicit capability authorization, deterministic domain validation, step-up approval, idempotency, source actor/tenant authorization and durable audit. Posted voucher mutation remains prohibited.
 
-**Excel UAT harness (owner-sanctioned, not a new production milestone):** local typed XLSX reads plus a controlled workbook source adapter exercise customer create/update, procurement request create and draft-voucher create on Windows. The next UAT layer starts from Telegram ingress, lets only the provider-neutral planner propose a registered action, shows the complete normalized payload, and requires a separate short-lived same-actor approval before mutation. The CI planner is synthetic, not a live LLM.
+**Windows Setup Wizard UAT (owner-sanctioned packaging layer):** localhost-only `/setup` persists validated non-secret configuration, creates the managed Excel sandbox, and stores Telegram/OpenAI credentials through Windows DPAPI without returning secret values. The UI must not claim live Telegram or LLM connectivity until their separately gated integration tests pass.
 
 For each milestone:
 
