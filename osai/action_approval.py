@@ -86,6 +86,13 @@ class PendingApprovalStore:
             raise ValueError("now_epoch must be non-negative")
         return value
 
+    def _purge_expired(self, now: int) -> None:
+        self._db.execute(
+            "DELETE FROM pending_action_approvals WHERE expires_at < ?",
+            (now,),
+        )
+        self._db.commit()
+
     def issue(
         self,
         *,
@@ -98,6 +105,7 @@ class PendingApprovalStore:
         if ttl_seconds < 30 or ttl_seconds > 900:
             raise ValueError("ttl_seconds must be between 30 and 900")
         now = self._now(now_epoch)
+        self._purge_expired(now)
         approval_ref = f"tg:{secrets.token_urlsafe(24)}"
         idempotency_key = f"tg:{uuid.uuid4().hex}"
         payload_json = json.dumps(
@@ -208,7 +216,7 @@ class PendingApprovalStore:
             changed = self._db.execute(
                 """
                 UPDATE pending_action_approvals
-                SET claimed_at=?
+                SET claimed_at=?, payload_json='{}'
                 WHERE approval_hash=? AND claimed_at IS NULL
                 """,
                 (now, self._hash(approval_ref)),
@@ -232,7 +240,7 @@ class PendingApprovalStore:
         now = self._now(now_epoch)
         changed = self._db.execute(
             """
-            UPDATE pending_action_approvals SET claimed_at=?
+            UPDATE pending_action_approvals SET claimed_at=?, payload_json='{}'
             WHERE approval_hash=? AND tenant_id=? AND actor_id=?
               AND claimed_at IS NULL AND expires_at>=?
             """,
