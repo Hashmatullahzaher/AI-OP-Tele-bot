@@ -3,11 +3,11 @@
 | ID | Decision | Status | Evidence / implication |
 |---|---|---|---|
 | DEC-001 | Authoritative existing repo is `Hashmatullahzaher/AI-OP-Tele-bot`. | CONFIRMED 2026-09-26 | Keep generic product separate from any individual customer ERP. |
-| DEC-002 | Build both real connector families in stages: Google Drive/spreadsheets and client-system APIs. | CONFIRMED 2026-09-26 | One typed connector contract; first live slice Drive read-only, followed by API read-only when an example API contract is available. Exact connector order for production may be adjusted with owner approval. |
-| DEC-003 | One shared core supporting customer-hosted/local and cloud deployment. | CONFIRMED 2026-09-26 | One backend codebase; environment-specific packaging, secure outbound bridge for offline/LAN sources. Live Telegram and Google APIs need internet connectivity. |
-| DEC-004 | Product is a universal AI operating layer, not an Al-Biruni bot. | CONFIRMED during discovery | ERP-less company may connect approved Drive documents/spreadsheets. |
-| DEC-005 | Telegram text/voice, source-grounded answers, Excel/PDF reports and permissioned changes are target capabilities. | CONFIRMED as product vision, NOT approved as MVP implementation scope | Phase these capabilities; no financial write capability in read-only pilot. |
-| DEC-006 | Previous browser-based demo with two simulated connector families can be preserved for owner review. | PROPOSED | Demo not yet formally accepted; do not claim it meets production acceptance. |
+| DEC-002 | Build both real connector families in stages: Google Drive/spreadsheets and client-system APIs. | CONFIRMED 2026-09-26 | One typed connector contract; first live slice Drive read-only, followed by API read-only when an example API contract is available. |
+| DEC-003 | One shared core supports customer-hosted/local and cloud deployment. | CONFIRMED 2026-09-26 | One backend codebase; environment-specific packaging. Live Telegram/Google APIs require internet connectivity. |
+| DEC-004 | Product is a universal AI operating layer, not an Al-Biruni bot. | CONFIRMED during discovery | A company with no ERP may connect approved Drive documents/spreadsheets. |
+| DEC-005 | Telegram text/voice, source-grounded answers, Excel/PDF reports and permissioned changes are target capabilities. | CONFIRMED as product vision | Phase these capabilities; no financial write capability in the read-only pilot. |
+| DEC-006 | Previous browser-based demo with two simulated connector families is preserved for product-direction review. | PROPOSED / demo only | It is not production evidence. |
+| DEC-007 | First sanctioned live-source pilot is an owner-controlled Google Drive folder containing one native Sheet and one XLSX copy with synthetic data. | CONFIRMED 2026-09-26 | Private resource IDs, URLs and OAuth credentials stay outside Git. F3 remains read-only. |
 
-Decision changes require author, date, rationale and affected acceptance criteria in this file and `docs/00-governance/OPEN_ITEMS.md`.
-| DEC-007 | First sanctioned live-source pilot uses an owner-controlled Google Drive folder containing synthetic Google Sheets and XLSX files; no client production data. | CONFIRMED 2026-09-26 | Test corpus has been provisioned outside the public repository. Resource IDs and credentials are intentionally not committed. F3 remains read-only. |
+Decision changes require author/date/rationale and affected acceptance criteria to be recorded here and in `OPEN_ITEMS.md` when applicable.
