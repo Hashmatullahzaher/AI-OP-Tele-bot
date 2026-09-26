@@ -91,6 +91,7 @@ class PendingApprovalStore:
         *,
         context: ExecutionContext,
         prepared: PreparedAction,
+        request_payload: Mapping[str, JSONValue],
         ttl_seconds: int = 300,
         now_epoch: int | None = None,
     ) -> PendingApproval:
@@ -100,7 +101,7 @@ class PendingApprovalStore:
         approval_ref = f"tg:{secrets.token_urlsafe(24)}"
         idempotency_key = f"tg:{uuid.uuid4().hex}"
         payload_json = json.dumps(
-            dict(prepared.normalized_payload),
+            dict(request_payload),
             sort_keys=True,
             separators=(",", ":"),
             ensure_ascii=False,
@@ -128,7 +129,7 @@ class PendingApprovalStore:
         return PendingApproval(
             approval_ref=approval_ref,
             action=prepared.action,
-            payload=dict(prepared.normalized_payload),
+            payload=dict(request_payload),
             payload_digest=prepared.payload_digest,
             idempotency_key=idempotency_key,
             expires_at=now + ttl_seconds,
