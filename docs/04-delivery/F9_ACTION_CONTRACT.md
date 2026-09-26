@@ -54,7 +54,8 @@ The generic F9 layer has no capability to post the voucher. A source response ot
 - Every mutation requires an idempotency key.
 - Replaying the exact same completed request returns the prior receipt without a second source call.
 - Reusing an idempotency key for a different action/payload/actor is rejected.
-- If the local journal is IN_PROGRESS after an uncertain source outcome, automatic retry is denied pending reconciliation.
+- Voucher debit/credit inputs must use no more than two fractional digits; accepted line amounts are canonicalized before digest, approval and source dispatch so the balance check and source payload are identical.
+- If the local journal is IN_PROGRESS after an uncertain source outcome, automatic retry is denied pending reconciliation. A matching mutation cannot bypass this by switching to a new idempotency key.
 - The customer source endpoint must independently honor the same idempotency key.
 
 ## Source integration
