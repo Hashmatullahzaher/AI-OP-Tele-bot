@@ -18,7 +18,11 @@ from urllib.parse import urlsplit
 from .config import RuntimeConfig
 from .deployment import ReadinessReport, evaluate_readiness
 from .setup_config import SetupError, SetupValidationError
-from .setup_wizard import SetupWebController, setup_manager_for_runtime
+from .setup_wizard import (
+    SetupWebController,
+    setup_access_token_for_runtime,
+    setup_manager_for_runtime,
+)
 from .storage import TenantSecurityStore
 
 CORE_VERSION = "0.1.0"
@@ -45,8 +49,7 @@ small{color:#64748b}code{background:#f1f5f9;padding:2px 6px;border-radius:6px}.o
 <p>Local endpoint: <code>http://127.0.0.1:8765</code></p><p id="ready">Readiness: checking...</p></div>
 <div class="card"><h2>Security boundary</h2><p>The Windows local profile binds to loopback by default. No public firewall
 rule is created by the installer. Telegram, hosted AI, Drive, and customer APIs stay unavailable until separately configured.</p></div>
-<div class="card"><h2>Configuration</h2><p>Use the local Setup Wizard to prepare Excel, Telegram credentials, and the AI provider.</p>
-<p><a href="/setup" style="display:inline-block;padding:10px 14px;background:#1d4ed8;color:white;border-radius:9px;text-decoration:none;font-weight:600">Open Setup Wizard</a></p></div>
+<div class="card"><h2>Configuration</h2><p>Use the <strong>OS AI Core Setup</strong> shortcut from the Windows Start Menu. Setup requires administrator approval and is not opened from an ordinary browser link.</p></div>
 </div>
 <script>
 async function refresh(){
@@ -147,6 +150,9 @@ class _HealthHandler(BaseHTTPRequestHandler):
             if controller is None or not self._trusted_loopback_host():
                 self._json(404, {"status": "not_found"})
                 return
+            if not controller.verify_access(self.headers.get("X-OSAI-Setup-Access")):
+                self._json(403, {"error": "administrator setup access required"})
+                return
             self._json(200, controller.status())
             return
         if self.path == "/favicon.ico":
@@ -163,6 +169,9 @@ class _HealthHandler(BaseHTTPRequestHandler):
             return
         if not self._trusted_loopback_host() or not self._trusted_origin():
             self._json(403, {"error": "setup request rejected"})
+            return
+        if not controller.verify_access(self.headers.get("X-OSAI-Setup-Access")):
+            self._json(403, {"error": "administrator setup access required"})
             return
         if not controller.verify_csrf(self.headers.get("X-OSAI-CSRF")):
             self._json(403, {"error": "setup request rejected"})
@@ -265,6 +274,7 @@ def build_server(config: RuntimeConfig) -> _RuntimeServer:
         controller = SetupWebController(
             config=config,
             manager=setup_manager_for_runtime(config),
+            access_token=setup_access_token_for_runtime(config),
         )
     server.setup_controller = controller
     return server
