@@ -313,7 +313,7 @@ class TenantSecurityStore:
         if ttl_seconds < 60 or ttl_seconds > 3600:
             raise ValueError("ttl_seconds must be between 60 and 3600")
         code = secrets.token_urlsafe(24)
-        challenge_hash = hashlib.sha256(f"{bot_alias}:{code}".encode("utf-8")).hexdigest()
+        challenge_hash = hashlib.sha256(f"{bot_alias}:{code}".encode()).hexdigest()
         self._db.execute(
             """
             INSERT INTO telegram_pairing_challenges(
@@ -339,7 +339,7 @@ class TenantSecurityStore:
             raise PolicyDenied("pairing unavailable")
         if telegram_user_id <= 0 or chat_id <= 0 or now_epoch < 0:
             raise PolicyDenied("pairing unavailable")
-        challenge_hash = hashlib.sha256(f"{bot_alias}:{code}".encode("utf-8")).hexdigest()
+        challenge_hash = hashlib.sha256(f"{bot_alias}:{code}".encode()).hexdigest()
         try:
             self._db.execute("BEGIN IMMEDIATE")
             row = self._db.execute(
@@ -496,7 +496,7 @@ class TenantSecurityStore:
     ) -> int:
         self._require_active_tenant(context.tenant_id)
         payload_json = json.dumps(sensitive_payload or {}, sort_keys=True, separators=(",", ":"))
-        payload_digest = hashlib.sha256(payload_json.encode("utf-8")).hexdigest()
+        payload_digest = hashlib.sha256(payload_json.encode()).hexdigest()
         prev = self._db.execute(
             "SELECT event_hash FROM audit_events WHERE tenant_id=? ORDER BY sequence DESC LIMIT 1",
             (context.tenant_id,),
@@ -519,7 +519,7 @@ class TenantSecurityStore:
             sort_keys=True,
             separators=(",", ":"),
         )
-        event_hash = hashlib.sha256(material.encode("utf-8")).hexdigest()
+        event_hash = hashlib.sha256(material.encode()).hexdigest()
         cur = self._db.execute(
             """
             INSERT INTO audit_events(
@@ -580,7 +580,7 @@ class TenantSecurityStore:
                 sort_keys=True,
                 separators=(",", ":"),
             )
-            expected = hashlib.sha256(material.encode("utf-8")).hexdigest()
+            expected = hashlib.sha256(material.encode()).hexdigest()
             if row["event_hash"] != expected:
                 return False
             prev_hash = str(row["event_hash"])
