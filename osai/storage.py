@@ -209,6 +209,31 @@ class TenantSecurityStore:
             )
             raise PolicyDenied("capability or resource scope denied")
 
+    def require_grant(
+        self,
+        *,
+        context: ExecutionContext,
+        capability: str,
+        resource_scope: str,
+    ) -> None:
+        """Require one exact capability/resource grant or a global '*' grant."""
+
+        self._require_active_actor(context.tenant_id, context.actor_id)
+        row = self._db.execute(
+            "SELECT 1 FROM grants WHERE tenant_id=? AND actor_id=? AND capability=? "
+            "AND resource_scope IN (?, '*') LIMIT 1",
+            (context.tenant_id, context.actor_id, capability, resource_scope),
+        ).fetchone()
+        if row is None:
+            self.append_audit(
+                context=context,
+                event="policy.deny",
+                capability=capability,
+                resource_scope=resource_scope,
+                result="DENIED",
+            )
+            raise PolicyDenied("capability or resource scope denied")
+
     def register_connector(
         self,
         *,
@@ -284,6 +309,23 @@ class TenantSecurityStore:
         if not isinstance(parsed, dict):
             raise RuntimeError("stored scoped object is invalid")
         return parsed
+
+    def delete_scoped(
+        self,
+        *,
+        tenant_id: str,
+        kind: str,
+        object_id: str,
+    ) -> bool:
+        """Delete one tenant-owned cache/report metadata record."""
+
+        self._require_active_tenant(tenant_id)
+        changed = self._db.execute(
+            "DELETE FROM scoped_objects WHERE tenant_id=? AND object_kind=? AND object_id=?",
+            (tenant_id, kind, object_id),
+        ).rowcount
+        self._db.commit()
+        return changed == 1
 
     @staticmethod
     def _validate_bot_alias(bot_alias: str) -> None:
