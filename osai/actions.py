@@ -60,6 +60,14 @@ class FinancialInvariantError(ActionError):
 
 
 @dataclass(frozen=True)
+class PreparedAction:
+    action: str
+    normalized_payload: Mapping[str, JSONValue]
+    payload_digest: str
+    definition: "ActionDefinition"
+
+
+@dataclass(frozen=True)
 class ActionReceipt:
     action: str
     source_record_id: str
@@ -417,6 +425,30 @@ class ActionCoordinator:
         self.adapter = adapter
         self.approval_verifier = approval_verifier
 
+    def prepare(
+        self,
+        *,
+        context: ExecutionContext,
+        action: str,
+        payload: Mapping[str, JSONValue],
+    ) -> PreparedAction:
+        definition = self.definitions.get(action)
+        if definition is None:
+            raise ActionNotAllowed("action is not registered")
+        self.security_store.assert_actor(context)
+        self.security_store.authorize(context, definition.manifest())
+        try:
+            validate_value(definition.input_schema, payload)
+        except SchemaValidationError as exc:
+            raise ActionNotAllowed("action payload is invalid") from exc
+        normalized = _validate_domain(action, payload)
+        return PreparedAction(
+            action=action,
+            normalized_payload=normalized,
+            payload_digest=_digest(action, normalized),
+            definition=definition,
+        )
+
     def execute(
         self,
         *,
@@ -426,21 +458,14 @@ class ActionCoordinator:
         approval_ref: str,
         idempotency_key: str,
     ) -> ActionReceipt:
-        definition = self.definitions.get(action)
-        if definition is None:
-            raise ActionNotAllowed("action is not registered")
         if self._IDEMPOTENCY_RE.fullmatch(idempotency_key) is None:
             raise ActionNotAllowed("invalid idempotency key")
         if self._APPROVAL_RE.fullmatch(approval_ref) is None:
             raise ApprovalRequired("approval is required")
-        self.security_store.assert_actor(context)
-        self.security_store.authorize(context, definition.manifest())
-        try:
-            validate_value(definition.input_schema, payload)
-        except SchemaValidationError as exc:
-            raise ActionNotAllowed("action payload is invalid") from exc
-        normalized = _validate_domain(action, payload)
-        payload_digest = _digest(action, normalized)
+        prepared = self.prepare(context=context, action=action, payload=payload)
+        definition = prepared.definition
+        normalized = prepared.normalized_payload
+        payload_digest = prepared.payload_digest
         if not self.approval_verifier.verify(
             context=context,
             action=action,
