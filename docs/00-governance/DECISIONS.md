@@ -13,4 +13,6 @@
 | DEC-008 | First real UAT host target is Windows PC / Windows Server. | CONFIRMED 2026-09-26 | Keep one shared core; add Windows CI/UAT path before production service packaging. |
 | DEC-009 | First F9 mutation scope is customer create/update, procurement request create, and draft voucher create only. | CONFIRMED 2026-09-26 | Posted voucher edit/post/delete remains prohibited; F9 uses approval, idempotency, source authorization and audit. |
 
+| DEC-010 | Before a real customer API, exercise the same F9 flow against a local Excel sandbox workbook on Windows. | CONFIRMED 2026-09-26 | Excel is a UAT harness only; four approved actions write to controlled sheets with source-side idempotency. |
+
 Decision changes require author/date/rationale and affected acceptance criteria to be recorded here and in `OPEN_ITEMS.md` when applicable.
