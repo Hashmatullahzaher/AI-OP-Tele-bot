@@ -603,6 +603,12 @@ class TenantSecurityStore:
             prev_hash = str(row["event_hash"])
         return True
 
+    def assert_actor(self, context: ExecutionContext, *, tenant_data: bool = True) -> str:
+        """Re-check actor status/role at an external disclosure boundary."""
+        if tenant_data:
+            return self._require_tenant_actor(context.tenant_id, context.actor_id)
+        return self._require_active_actor(context.tenant_id, context.actor_id)
+
     def _same_tenant(self, context: ExecutionContext, owner_tenant_id: str) -> None:
         if context.tenant_id != owner_tenant_id:
             # Do not reveal whether the foreign object exists.
