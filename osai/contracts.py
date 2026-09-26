@@ -7,12 +7,13 @@ and structured arguments; server-side code supplies identity and tenant context.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from datetime import datetime, timezone
-from decimal import Decimal
-from typing import Any, Callable, Mapping, Protocol
 import re
 import uuid
+from collections.abc import Callable, Mapping
+from dataclasses import dataclass
+from datetime import UTC, datetime
+from decimal import Decimal
+from typing import Any, Protocol
 
 
 JSONScalar = str | int | float | bool | None
@@ -55,7 +56,7 @@ class ExecutionContext:
         request_classification: str = "internal",
         resource_scope: tuple[str, ...] = (),
         session_assurance: str = "standard",
-    ) -> "ExecutionContext":
+    ) -> ExecutionContext:
         if not tenant_id or not actor_id:
             raise ContractError("tenant_id and actor_id are required")
         return cls(
@@ -84,12 +85,12 @@ class SourceProvenance:
         source_type: str,
         revision: str | None = None,
         locator: Mapping[str, JSONValue] | None = None,
-    ) -> "SourceProvenance":
+    ) -> SourceProvenance:
         return cls(
             source_id=source_id,
             source_type=source_type,
             revision=revision,
-            observed_at=datetime.now(timezone.utc).isoformat(),
+            observed_at=datetime.now(UTC).isoformat(),
             locator=locator or {},
         )
 
@@ -143,7 +144,7 @@ class CapabilityManifest:
     )
 
     @classmethod
-    def from_dict(cls, raw: Mapping[str, Any]) -> "CapabilityManifest":
+    def from_dict(cls, raw: Mapping[str, Any]) -> CapabilityManifest:
         unknown = set(raw) - cls._FIELDS
         missing = cls._FIELDS - set(raw)
         if unknown:

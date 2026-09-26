@@ -6,13 +6,14 @@ only secret *references*, never secret values, and uses compound tenant keys.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
-from datetime import datetime, timezone
 import hashlib
 import json
 import sqlite3
+from collections.abc import Mapping
+from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 
 from .contracts import CapabilityManifest, ExecutionContext, PolicyDenied
 
@@ -44,7 +45,7 @@ class TenantSecurityStore:
     def close(self) -> None:
         self._db.close()
 
-    def __enter__(self) -> "TenantSecurityStore":
+    def __enter__(self) -> TenantSecurityStore:
         return self
 
     def __exit__(self, *_: object) -> None:
@@ -254,7 +255,7 @@ class TenantSecurityStore:
             (context.tenant_id,),
         ).fetchone()
         prev_hash = str(prev["event_hash"]) if prev else "GENESIS"
-        created_at = datetime.now(timezone.utc).isoformat()
+        created_at = datetime.now(UTC).isoformat()
         material = json.dumps(
             {
                 "tenant_id": context.tenant_id,

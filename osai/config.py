@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Mapping
+from typing import Any
 from urllib.parse import urlparse
 
 from .contracts import ContractError
@@ -33,7 +34,7 @@ class RuntimeConfig:
     )
 
     @classmethod
-    def from_mapping(cls, raw: Mapping[str, Any]) -> "RuntimeConfig":
+    def from_mapping(cls, raw: Mapping[str, Any]) -> RuntimeConfig:
         unknown = set(raw) - cls._FIELDS
         if unknown:
             raise ContractError(f"unknown runtime config field(s): {sorted(unknown)}")

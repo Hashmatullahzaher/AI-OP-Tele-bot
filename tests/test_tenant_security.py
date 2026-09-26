@@ -1,7 +1,7 @@
 import json
-from pathlib import Path
 import tempfile
 import unittest
+from pathlib import Path
 
 from osai.contracts import CapabilityManifest, ExecutionContext, PolicyDenied
 from osai.storage import TenantSecurityStore
