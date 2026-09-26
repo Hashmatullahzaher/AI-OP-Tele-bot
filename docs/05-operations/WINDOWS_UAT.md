@@ -6,22 +6,28 @@ This runbook is for a controlled test host, not yet a production certification. 
 
 ## Supported UAT shape
 
-- Windows 11 / Windows Server with Python 3.11+.
+- Windows 11 / Windows Server.
 - OS AI Core runs the same Python core used by cloud/container builds.
+- Source-level UAT requires Python 3.11+; the packaged installer bundles the runtime and does not require the end user to install Python.
 - Local runtime binds to `127.0.0.1` by default.
-- Internet access is required for live Telegram, Google Drive and hosted LLM providers.
+- Internet access is required only after live Telegram, Google Drive, hosted LLM, or remote customer API capabilities are explicitly enabled.
 - A LAN-only customer ERP may be reached locally only through an explicitly configured client connector.
 - No public unauthenticated port is allowed.
 
-## UAT preparation
+## Source UAT preparation
 
 1. Clone the approved exact SHA.
 2. Run `scripts/windows/uat-check.ps1` from PowerShell.
 3. Keep `OSAI_PROFILE=local`.
 4. Store real secrets outside Git and outside the repository working tree.
-5. Use a dedicated Windows service account for later production service installation; do not run as a shared administrator account.
-6. Enable Windows Firewall rules explicitly only when a reviewed local integration requires them.
-7. Back up the SQLite database before version changes and test restore before production use.
+5. Enable Windows Firewall rules explicitly only when a reviewed local integration requires them.
+6. Back up the SQLite database before version changes and test restore before production use.
+
+## Installer UAT
+
+The packaging stage adds `OS-AI-Core-Setup.exe`. It installs `OSAICore` as an Automatic Windows service under the
+low-privilege `NT AUTHORITY\LocalService` account and opens the local operator dashboard through a Start Menu shortcut.
+See `WINDOWS_INSTALLER_UAT.md` for the exact acceptance contract and remaining release gates.
 
 ## Mutation UAT
 
@@ -31,17 +37,18 @@ The first write actions are limited to:
 - procurement request create,
 - draft voucher create.
 
-Run only against a sanctioned sandbox API. Confirm the source endpoint enforces the same actor/tenant identity and idempotency key. Draft voucher creation must stay DRAFT. Posting or editing posted vouchers is out of scope.
+Run only against a sanctioned sandbox API or the approved Excel sandbox. Confirm the source endpoint enforces the same
+actor/tenant identity and idempotency key. Draft voucher creation must stay DRAFT. Posting or editing posted vouchers is out of scope.
 
-## Not yet certified
+## Not yet production certified
 
 This repository does not yet claim:
-- Windows Service installation/upgrade automation,
-- production secrets backend,
+- signed production Windows release artifacts,
+- production secrets backend/provisioning,
 - production TLS/gateway configuration,
 - production customer write API,
 - production backup schedule/RPO/RTO,
 - monitoring/alerting,
-- live step-up approval mechanism.
+- live external-provider credentials on the installer host.
 
 Those are explicit release gates, not implementation assumptions.
