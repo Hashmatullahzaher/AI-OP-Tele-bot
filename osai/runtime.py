@@ -9,9 +9,9 @@ from __future__ import annotations
 import argparse
 import json
 import os
+from collections.abc import Mapping
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from typing import Mapping
 
 from .config import RuntimeConfig
 from .deployment import ReadinessReport, evaluate_readiness
