@@ -1,24 +1,24 @@
 # Ordered delivery plan (App Maker)
 
-**Current stage: F6 source-linked reporting.** F0/F1 regression remediation is present in the current lineage; F2–F5 builder slices have green CI. Live provider/source E2E gates remain separately tracked in OPEN_ITEMS and do not justify inventing credentials or customer policies.
+**Current stage: F9 permissioned actions + Windows-first UAT.** F0–F8 builder slices exist with green CI handoffs on their exact SHAs; provider/source live E2E gates remain tracked in OPEN_ITEMS. The owner has now fixed the first Windows UAT target and the first four mutation classes.
 
 Milestones:
 
 - **F0 — Shared foundation:** typed tool/connector SDK, schema contracts, local/cloud runtime contract, CI.
-- **F1 — Tenant identity/policy/audit:** tenant/actor/grants, scoped objects, secret references, durable redacted audit.
-- **F2 — Telegram private text:** secure pairing, private-chat routing, webhook/polling boundary, revoke/replay controls. Live E2E is blocked by O-05.
-- **F3 — Google Drive read-only:** Sheets/XLSX aliases, per-disclosure source re-check, bounded parser and provenance. Builder handoff SHA `f50119eb82c0d3b0aadc638556f9c800acae4370`; O-02 blocks full app-owned OAuth E2E only.
-- **F4 — Client REST read-only:** typed versioned GET adapter, exact host/operation allowlists, source-auth boundary and deterministic response mapping. Builder handoff SHA `da4bccf5519386eb68b33215e09fba87131e9720`; O-03 blocks sanctioned-customer live E2E only.
-- **F5 — Source-grounded AI:** provider abstraction, strict single-tool planning, policy, source provenance, deterministic financial analysis and mandatory audit. Current branch implements this to the provider-adapter boundary; O-04 blocks the live model run.
-- **F6 — Reports:** deterministic source-linked CSV/native XLSX/PDF artifacts, expiry/integrity metadata, and tenant/actor re-check at download. Current branch implements the generic artifact layer; O-09 controls pilot layout, Unicode/Dari PDF font packaging and retention/delivery policy.
-- **F7 — Voice:** Telegram voice notes STT/TTS through identical auth/policy/audit.
-- **F8 — Dual deployment:** same core/version in cloud and local packaging, backup/restore and network hardening.
-- **F9 — Permissioned writes (separate release):** typed domain operations, step-up approval, idempotency and financial invariants.
+- **F1 — Tenant identity/policy/audit:** tenant/actor/grants, operator separation, secret references and durable redacted audit.
+- **F2 — Telegram private text:** secure pairing, private-chat routing, webhook boundary, revoke/replay controls. Live E2E remains gated by O-05.
+- **F3 — Google Drive read-only:** Sheets/XLSX aliases, ACL/resource re-check, bounded parsing and provenance. App-owned OAuth E2E remains gated by O-02.
+- **F4 — Client REST read-only:** typed GET adapter, host/operation allowlists and source-auth boundary. Live customer sandbox remains gated by O-03.
+- **F5 — Source-grounded AI:** provider abstraction, strict tool planning, provenance, deterministic financial analysis and mandatory audit. Live model selection remains gated by O-04.
+- **F6 — Reports:** source-linked CSV/XLSX/PDF artifacts with expiry, integrity and access re-check. Pilot layout/Dari PDF policy remains under O-09.
+- **F7 — Voice:** Telegram voice notes STT/TTS through the same auth/policy/audit. Live provider + Dari evaluation remains under O-09.
+- **F8 — Dual deployment:** same core for cloud/local, readiness and backup/restore. First UAT host is now Windows PC / Windows Server; production certification details remain O-08.
+- **F9 — Permissioned writes:** current owner-approved scope is customer create/update, procurement request create and **draft voucher create only**. Every write requires explicit capability authorization, deterministic domain validation, step-up approval, idempotency, source actor/tenant authorization and durable audit. Posted voucher mutation remains prohibited.
 
 For each milestone:
 
 `MAP CONTRACT -> IMPLEMENT -> TEST -> SELF-AUDIT -> FIX -> COMMIT EXACT SHA -> CI -> INDEPENDENT AUDIT -> REMEDIATE -> MERGE`
 
-The auditor must use the same `docs/04-delivery/ACCEPTANCE_CONTRACT.md`. New audit blockers outside that contract are limited to material security, privacy, data-loss, financial-integrity, unrecoverable-correctness or severe operational failures.
+F9 live acceptance additionally requires a sanctioned source write API for the four actions and a production step-up approval mechanism. Missing client-specific rules must not be invented.
 
-Missing official inputs block only their dependent live feature. Generic contracts, negative tests and unrelated milestones continue without inventing customer routes, permissions, credentials or policy.
+The auditor must use the shared acceptance contract plus `docs/04-delivery/F9_ACTION_CONTRACT.md`. New audit blockers outside those contracts are limited to material security, privacy, data loss, financial integrity, unrecoverable correctness or severe operational failure.
