@@ -80,6 +80,74 @@ try {
         throw "Installed service did not create its SQLite database under ProgramData."
     }
 
+    $setupPage = Invoke-WebRequest -Uri "http://127.0.0.1:8765/setup" -TimeoutSec 5
+    if ($setupPage.Content -notmatch "OS AI Core Setup") {
+        throw "Installed runtime did not serve the Setup Wizard."
+    }
+    $csrfMatch = [regex]::Match($setupPage.Content, 'const csrf="([^"]+)"')
+    if (-not $csrfMatch.Success) {
+        throw "Setup Wizard did not expose its in-memory CSRF token."
+    }
+    $csrf = $csrfMatch.Groups[1].Value
+    $setupHeaders = @{
+        "X-OSAI-CSRF" = $csrf
+        "Origin" = "http://127.0.0.1:8765"
+    }
+
+    $excel = Invoke-RestMethod -Method Post `
+        -Uri "http://127.0.0.1:8765/api/setup/excel/init" `
+        -Headers $setupHeaders -ContentType "application/json" -Body "{}" -TimeoutSec 10
+    if (-not $excel.managed_excel_exists) {
+        throw "Setup Wizard did not initialize the managed Excel workbook."
+    }
+
+    $fakeTelegram = "123456789:abcdefghijklmnopqrstuvwxyz_ABCDE"
+    $fakeOpenAI = "sk-test-abcdefghijklmnopqrstuvwxyz"
+    $settings = @{
+        excel_enabled = $true
+        excel_workbook_path = [string]$excel.managed_excel_path
+        telegram_enabled = $true
+        telegram_bot_alias = "primary-bot"
+        llm_provider = "openai"
+        llm_model = "approved-model"
+        local_llm_base_url = $null
+    }
+    $setupBody = @{
+        settings = $settings
+        telegram_bot_token = $fakeTelegram
+        openai_api_key = $fakeOpenAI
+        clear_telegram_token = $false
+        clear_openai_api_key = $false
+    } | ConvertTo-Json -Depth 5
+
+    $saved = Invoke-RestMethod -Method Post `
+        -Uri "http://127.0.0.1:8765/api/setup" `
+        -Headers $setupHeaders -ContentType "application/json" -Body $setupBody -TimeoutSec 10
+    if (-not $saved.telegram_token_configured -or -not $saved.openai_key_configured) {
+        throw "Setup Wizard did not persist credential state."
+    }
+    if ($saved.telegram_connector_active -or $saved.llm_connector_active) {
+        throw "Setup Wizard must not claim live connectors are active."
+    }
+
+    $settingsPath = Join-Path $dataRoot "config\settings.json"
+    $secretsPath = Join-Path $dataRoot "config\secrets.dpapi.json"
+    if (-not (Test-Path $settingsPath) -or -not (Test-Path $secretsPath)) {
+        throw "Setup Wizard did not persist configuration files."
+    }
+    $settingsRaw = Get-Content -Raw -LiteralPath $settingsPath
+    $secretsRaw = Get-Content -Raw -LiteralPath $secretsPath
+    if ($settingsRaw.Contains($fakeTelegram) -or $settingsRaw.Contains($fakeOpenAI) `
+        -or $secretsRaw.Contains($fakeTelegram) -or $secretsRaw.Contains($fakeOpenAI)) {
+        throw "A setup credential was persisted in plaintext."
+    }
+
+    $status = Invoke-RestMethod -Uri "http://127.0.0.1:8765/api/setup/status" -TimeoutSec 5
+    if (-not $status.telegram_token_configured -or -not $status.openai_key_configured) {
+        throw "Setup status did not report stored credential state."
+    }
+
+    Write-Output "WINDOWS_SETUP_WIZARD_SMOKE_PASS"
     Write-Output "WINDOWS_INSTALLER_SMOKE_PASS"
 }
 finally {
