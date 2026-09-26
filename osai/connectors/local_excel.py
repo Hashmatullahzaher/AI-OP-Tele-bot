@@ -23,6 +23,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
+from typing import cast
 from xml.sax.saxutils import escape as xml_escape
 
 from ..actions import ActionReceipt
@@ -262,8 +263,8 @@ class LocalExcelConnector:
         data: dict[str, JSONValue] = {
             "resource_alias": self.resource.alias,
             "table_alias": table.alias,
-            "columns": headers,
-            "rows": rows,
+            "columns": cast(JSONValue, headers),
+            "rows": cast(JSONValue, rows),
             "row_count": len(rows),
             "revision": revision,
             "source_kind": "local_xlsx",
