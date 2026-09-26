@@ -51,7 +51,7 @@ class SetupApplyRequest:
     clear_openai_api_key: bool
 
     @classmethod
-    def from_mapping(cls, raw: Mapping[str, Any]) -> "SetupApplyRequest":
+    def from_mapping(cls, raw: Mapping[str, Any]) -> SetupApplyRequest:
         allowed = {
             "settings",
             "telegram_bot_token",
