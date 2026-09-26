@@ -19,4 +19,6 @@
 
 | DEC-012 | Windows UAT Setup Wizard stores local configuration in ProgramData and protects Telegram/OpenAI credentials with Windows DPAPI; Excel can activate immediately while live Telegram/LLM connectors remain gated. | CONFIRMED 2026-09-26 | Installer opens `/setup`; status APIs expose configured booleans only, never secret values. |
 
+| DEC-013 | Provide a one-file Windows Portable Local mode that requires no installer, Windows Service, or administrator elevation. | CONFIRMED 2026-09-26 | Portable mode runs per-user on 127.0.0.1:8766, stores data under LocalAppData, and exposes Dashboard/Setup/Stop from a small control window. |
+
 Decision changes require author/date/rationale and affected acceptance criteria to be recorded here and in `OPEN_ITEMS.md` when applicable.
