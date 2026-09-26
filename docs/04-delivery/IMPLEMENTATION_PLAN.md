@@ -1,15 +1,15 @@
 # Ordered delivery plan (App Maker)
 
-**Current stage: F3 Google Drive read-only implementation.** F0/F1 exact SHA `faf45ce316b1a6fbcdca25992c49d252259318a6` has green CI and passed lead-agent contract review with nonblocking notes. The isolated browser demo is not production evidence.
+**Current stage: F5 source-grounded AI orchestration.** F3 and F4 builder branches have green CI and are handed off for independent audit. Their live external E2E gates remain separately blocked by O-02 and O-03; these missing credentials/specifications do not block unrelated core engineering.
 
 Milestones:
 
 - **F0 — Shared foundation:** typed tool/connector SDK, schema contracts, local/cloud runtime contract, CI.
 - **F1 — Tenant identity/policy/audit:** tenant/actor/grants, scoped objects, secret references, durable redacted audit.
-- **F2 — Telegram private text:** secure pairing, private-chat routing, webhook/polling boundary, revoke/replay controls.
-- **F3 — Google Drive read-only:** Google Sheets/XLSX aliases, per-disclosure source re-check, bounded parser, provenance. Current branch implements this through the OAuth/token-provider boundary; O-02 blocks only live app-owned OAuth E2E.
-- **F4 — Client REST read-only:** typed versioned API adapter against one sanctioned sandbox system.
-- **F5 — Source-grounded AI:** provider abstraction and policy-constrained typed tool orchestration.
+- **F2 — Telegram private text:** secure pairing, private-chat routing, webhook/polling boundary, revoke/replay controls. Live E2E is blocked by O-05.
+- **F3 — Google Drive read-only:** Sheets/XLSX aliases, per-disclosure source re-check, bounded parser and provenance. Builder handoff SHA `f50119eb82c0d3b0aadc638556f9c800acae4370`; O-02 blocks full app-owned OAuth E2E only.
+- **F4 — Client REST read-only:** typed versioned GET adapter, exact host/operation allowlists, source-auth boundary and deterministic response mapping. Builder handoff SHA `da4bccf5519386eb68b33215e09fba87131e9720`; O-03 blocks sanctioned-customer live E2E only.
+- **F5 — Source-grounded AI:** provider abstraction, strict single-tool planning, policy, source provenance, deterministic financial analysis and mandatory audit. Current branch implements this to the provider-adapter boundary; O-04 blocks the live model run.
 - **F6 — Reports:** CSV then approved native XLSX/PDF with source provenance and access-limited artifacts.
 - **F7 — Voice:** Telegram voice notes STT/TTS through identical auth/policy/audit.
 - **F8 — Dual deployment:** same core/version in cloud and local packaging, backup/restore and network hardening.
@@ -21,4 +21,4 @@ For each milestone:
 
 The auditor must use the same `docs/04-delivery/ACCEPTANCE_CONTRACT.md`. New audit blockers outside that contract are limited to material security, privacy, data-loss, financial-integrity, unrecoverable-correctness or severe operational failures.
 
-**Next handoff:** obtain green CI for the F3 exact SHA. If green, mark the builder package `READY_FOR_INDEPENDENT_AUDIT`. Full F3 acceptance waits only on O-02 live app-owned OAuth/token-custody E2E. F4 may begin in parallel only after O-03 supplies a sanctioned API contract.
+Missing official inputs block only their dependent live feature. Generic contracts, negative tests and unrelated milestones continue without inventing customer routes, permissions, credentials or policy.
