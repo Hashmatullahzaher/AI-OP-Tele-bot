@@ -8,6 +8,7 @@ $serviceName = "OSAICore"
 $installDir = Join-Path $env:ProgramFiles "OS AI Core"
 $uninstaller = Join-Path $installDir "unins000.exe"
 $dataRoot = Join-Path $env:ProgramData "OS AI Core"
+$installLog = Join-Path $dataRoot "logs\install.log"
 
 function Wait-HttpReady {
     param([string]$Url)
@@ -34,7 +35,15 @@ try {
         throw "Installer exited with code $($install.ExitCode)."
     }
 
-    $service = Get-Service -Name $serviceName
+    $service = Get-Service -Name $serviceName -ErrorAction SilentlyContinue
+    if ($null -eq $service) {
+        if (Test-Path $installLog) {
+            Write-Output "--- OS AI Core install.log ---"
+            Get-Content -LiteralPath $installLog
+            Write-Output "--- end install.log ---"
+        }
+        throw "Installer completed but did not register service '$serviceName'."
+    }
     $service.WaitForStatus("Running", [TimeSpan]::FromSeconds(30))
 
     $serviceInfo = Get-CimInstance Win32_Service -Filter "Name='$serviceName'"
