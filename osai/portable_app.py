@@ -197,7 +197,10 @@ def run_gui() -> int:
     def open_data_folder() -> None:
         root_path = portable_data_root()
         root_path.mkdir(parents=True, exist_ok=True)
-        os.startfile(root_path)  # type: ignore[attr-defined]
+        startfile = getattr(os, "startfile", None)
+        if startfile is None:
+            raise RuntimeError("Open Data Folder is available only on Windows")
+        startfile(root_path)
 
     tk.Button(
         buttons,
