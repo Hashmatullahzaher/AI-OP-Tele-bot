@@ -70,6 +70,32 @@ jobs:
               Stop-Process -Id $proc.Id -Force
             }
           }
+      - name: Smoke actual double-click GUI launch path
+        shell: pwsh
+        run: |
+          $env:LOCALAPPDATA = "$env:RUNNER_TEMP\portable-gui-localappdata"
+          $proc = Start-Process -FilePath ".\dist\OS-AI-Core-Portable.exe" -PassThru
+          try {
+            $ready = $false
+            for ($i = 0; $i -lt 30; $i++) {
+              if ($proc.HasExited) {
+                throw "Portable GUI process exited before localhost became ready. Exit code: $($proc.ExitCode)"
+              }
+              try {
+                $health = Invoke-RestMethod -Uri "http://127.0.0.1:8766/healthz" -TimeoutSec 2
+                if ($health.status -eq "alive") { $ready = $true; break }
+              } catch {
+                Start-Sleep -Milliseconds 500
+              }
+            }
+            if (-not $ready) { throw "Double-click portable GUI path did not start localhost." }
+            Write-Output "WINDOWS_PORTABLE_DOUBLE_CLICK_PASS"
+          }
+          finally {
+            if (-not $proc.HasExited) {
+              Stop-Process -Id $proc.Id -Force
+            }
+          }
       - name: Upload portable executable
         uses: actions/upload-artifact@v4
         with:
