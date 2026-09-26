@@ -13,10 +13,10 @@ from .connectors.local_excel import initialize_excel_sandbox
 from .setup_config import (
     JsonSetupStore,
     MemorySecretStore,
+    SecretStore,
     SetupError,
     SetupManager,
     SetupStatus,
-    SecretStore,
     SetupValidationError,
     WindowsDpapiSecretStore,
 )
