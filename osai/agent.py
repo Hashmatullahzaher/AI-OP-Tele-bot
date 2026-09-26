@@ -26,9 +26,11 @@ from .contracts import (
     CapabilityRegistry,
     ExecutionContext,
     JSONValue,
+    PolicyCheck,
     PolicyDenied,
     SchemaValidationError,
     ToolExecutor,
+    validate_value,
     ToolResult,
 )
 
@@ -49,6 +51,20 @@ class ProviderUnavailable(AgentError):
 class AgentPlanInvalid(AgentError):
     def __init__(self, message: str = "AI plan is invalid") -> None:
         super().__init__("PLAN_INVALID", message)
+
+
+class AuditSink(Protocol):
+    def append_audit(
+        self,
+        *,
+        context: ExecutionContext,
+        event: str,
+        result: str,
+        capability: str | None = None,
+        resource_scope: str | None = None,
+        sensitive_payload: Mapping[str, Any] | None = None,
+    ) -> int:
+        """Persist a redacted/digested audit event before data is disclosed."""
 
 
 class ModelProvider(Protocol):
@@ -149,10 +165,12 @@ class AgentPlan:
             raise AgentPlanInvalid("plan arguments must be an object")
         if not all(isinstance(key, str) for key in arguments):
             raise AgentPlanInvalid("plan argument keys must be strings")
+        if not isinstance(analysis, Mapping):
+            raise AgentPlanInvalid("plan analysis must be an object")
         return cls(
             capability=capability,
             arguments=cast(Mapping[str, JSONValue], dict(arguments)),
-            analysis=AnalysisSpec.from_mapping(analysis if isinstance(analysis, Mapping) else None),
+            analysis=AnalysisSpec.from_mapping(analysis),
         )
 
 
@@ -184,6 +202,8 @@ class SourceGroundedAgent:
         provider: ModelProvider,
         registry: CapabilityRegistry,
         executor: ToolExecutor,
+        policy_check: PolicyCheck,
+        audit_sink: AuditSink,
         max_message_chars: int = 4_000,
     ) -> None:
         if max_message_chars < 1 or max_message_chars > 32_000:
@@ -191,6 +211,8 @@ class SourceGroundedAgent:
         self.provider = provider
         self.registry = registry
         self.executor = executor
+        self.policy_check = policy_check
+        self.audit_sink = audit_sink
         self.max_message_chars = max_message_chars
 
     def ask(self, *, message: str, context: ExecutionContext) -> GroundedAnswer:
@@ -213,6 +235,15 @@ class SourceGroundedAgent:
         plan = AgentPlan.from_mapping(raw_plan)
         if plan.capability not in {entry.capability for entry in catalog}:
             raise AgentPlanInvalid("provider selected a capability outside the catalog")
+        manifest, _ = self.registry.resolve(plan.capability)
+        try:
+            validate_value(manifest.input_schema, plan.arguments)
+        except SchemaValidationError as exc:
+            raise AgentPlanInvalid("provider arguments violate the tool contract") from exc
+        try:
+            self.policy_check(context, manifest)
+        except PolicyDenied as exc:
+            raise AgentError("SOURCE_ACCESS_DENIED", "source access denied") from exc
         try:
             result = self.executor.execute(
                 capability=plan.capability,
@@ -241,6 +272,17 @@ class SourceGroundedAgent:
         )
         if not sources:
             raise AgentError("SOURCE_UNAVAILABLE", "tool result has no source provenance")
+        self.audit_sink.append_audit(
+            context=context,
+            event="agent.source_read",
+            capability=plan.capability,
+            resource_scope=",".join(sorted(context.resource_scope)),
+            result="OK",
+            sensitive_payload={
+                "analysis_kind": plan.analysis.kind,
+                "source_count": len(sources),
+            },
+        )
         return GroundedAnswer(
             text=text,
             authoritative_data=authoritative,
