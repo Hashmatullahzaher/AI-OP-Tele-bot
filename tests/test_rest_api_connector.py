@@ -3,16 +3,16 @@ import unittest
 from pathlib import Path
 
 from osai.connectors.rest_api import (
-    APIParameter,
     APIOperation,
+    APIParameter,
     ClientRESTConnector,
-    RESTSource,
     ResponseField,
     RestAccessDenied,
     RestHTTPError,
     RestLimitExceeded,
     RestOperationNotAllowed,
     RestSchemaInvalid,
+    RESTSource,
     StaticHeaderAuthProvider,
     client_api_table_manifest,
 )
