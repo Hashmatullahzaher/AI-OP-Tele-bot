@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import http.client
 import json
+import socket
 import tempfile
 import threading
 import unittest
@@ -15,10 +16,13 @@ class SetupWizardHttpTests(unittest.TestCase):
     def setUp(self) -> None:
         self.tmp = tempfile.TemporaryDirectory()
         root = Path(self.tmp.name)
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+            probe.bind(("127.0.0.1", 0))
+            port = int(probe.getsockname()[1])
         self.config = RuntimeConfig.from_mapping({
             "profile": "local",
             "bind_host": "127.0.0.1",
-            "port": 0,
+            "port": port,
             "database_path": str(root / "data" / "osai.sqlite3"),
             "secret_backend": "test",
             "outbound_hosts": [],
@@ -60,7 +64,9 @@ class SetupWizardHttpTests(unittest.TestCase):
         return status, raw.decode()
 
     def csrf(self) -> str:
-        controller = getattr(self.server, "setup_controller")
+        controller = self.server.setup_controller
+        if controller is None:
+            raise AssertionError("setup controller was not configured")
         return controller.csrf_token
 
     def origin(self) -> str:
