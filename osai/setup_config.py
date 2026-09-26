@@ -79,7 +79,10 @@ class SetupSettings:
         if unknown:
             raise SetupValidationError(f"unknown setup field(s): {sorted(unknown)}")
 
-        excel_enabled = bool(raw.get("excel_enabled", False))
+        excel_raw = raw.get("excel_enabled", False)
+        if not isinstance(excel_raw, bool):
+            raise SetupValidationError("excel_enabled must be boolean")
+        excel_enabled = excel_raw
         workbook_raw = raw.get("excel_workbook_path")
         workbook = None if workbook_raw in {None, ""} else str(workbook_raw).strip()
         if workbook is not None:
@@ -90,7 +93,10 @@ class SetupSettings:
                 raise SetupValidationError("Excel workbook path must be absolute")
             workbook = str(path)
 
-        telegram_enabled = bool(raw.get("telegram_enabled", False))
+        telegram_raw = raw.get("telegram_enabled", False)
+        if not isinstance(telegram_raw, bool):
+            raise SetupValidationError("telegram_enabled must be boolean")
+        telegram_enabled = telegram_raw
         bot_alias = str(raw.get("telegram_bot_alias", "primary-bot")).strip()
         if not re.fullmatch(r"[a-z][a-z0-9_-]{2,63}", bot_alias):
             raise SetupValidationError("telegram_bot_alias is invalid")
