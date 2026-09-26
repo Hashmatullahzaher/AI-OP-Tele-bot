@@ -64,7 +64,7 @@ class PreparedAction:
     action: str
     normalized_payload: Mapping[str, JSONValue]
     payload_digest: str
-    definition: "ActionDefinition"
+    definition: ActionDefinition
 
 
 @dataclass(frozen=True)
