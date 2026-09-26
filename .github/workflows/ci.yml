@@ -25,3 +25,26 @@ jobs:
       - run: mypy osai
       - run: python -m compileall -q app osai
       - run: python -m unittest discover -s tests -v
+
+  container-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t os-ai-core:ci .
+      - name: Validate local profile in the same image
+        run: >-
+          docker run --rm --network none
+          -e OSAI_PROFILE=local
+          -e OSAI_BIND_HOST=127.0.0.1
+          -e OSAI_DATABASE_PATH=/tmp/local.sqlite3
+          -e OSAI_SECRET_BACKEND=test
+          os-ai-core:ci check
+      - name: Validate cloud profile in the same image
+        run: >-
+          docker run --rm --network none
+          -e OSAI_PROFILE=cloud
+          -e OSAI_BIND_HOST=0.0.0.0
+          -e OSAI_DATABASE_PATH=/tmp/cloud.sqlite3
+          -e OSAI_SECRET_BACKEND=test
+          -e OSAI_PUBLIC_BASE_URL=https://pilot.example.test
+          os-ai-core:ci check
