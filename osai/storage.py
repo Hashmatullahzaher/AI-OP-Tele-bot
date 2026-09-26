@@ -295,7 +295,10 @@ class TenantSecurityStore:
             ),
         )
         self._db.commit()
-        return int(cur.lastrowid)
+        lastrowid = cur.lastrowid
+        if lastrowid is None:
+            raise RuntimeError("audit insert did not return a row id")
+        return lastrowid
 
     def audit_records(self, tenant_id: str) -> list[AuditRecord]:
         rows = self._db.execute(
