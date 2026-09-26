@@ -15,4 +15,6 @@
 
 | DEC-010 | Before a real customer API, exercise the same F9 flow against a local Excel sandbox workbook on Windows. | CONFIRMED 2026-09-26 | Excel is a UAT harness only; four approved actions write to controlled sheets with source-side idempotency. |
 
+| DEC-011 | After direct Excel UAT, exercise Telegram ingress -> provider-neutral write planning -> separate same-actor approval -> F9 -> Excel before using live credentials. | CONFIRMED 2026-09-26 | CI uses a deterministic synthetic planner; live Telegram and live LLM remain separately gated. |
+
 Decision changes require author/date/rationale and affected acceptance criteria to be recorded here and in `OPEN_ITEMS.md` when applicable.
