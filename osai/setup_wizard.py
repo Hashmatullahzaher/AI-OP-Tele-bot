@@ -187,7 +187,7 @@ class SetupWebController:
         return presented is not None and hmac.compare_digest(self.csrf_token, presented)
 
     def render(self) -> str:
-        return render_setup_page(self.status(), self.csrf_token)
+        return render_setup_page({}, self.csrf_token)
 
     def _status_payload(self, status: SetupStatus) -> dict[str, object]:
         payload = status.as_dict()
