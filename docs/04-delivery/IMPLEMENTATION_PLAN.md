@@ -1,6 +1,6 @@
 # Ordered delivery plan (App Maker)
 
-**Current stage: F6 source-linked reporting.** F0/F1 regression remediation is present in the current lineage; F2–F5 builder slices have green CI. Live provider/source E2E gates remain separately tracked in OPEN_ITEMS and do not justify inventing credentials or customer policies.
+**Current stage: F7 provider-neutral voice processing.** F6 builder CI is green and report artifacts are handed off for independent audit; live provider/source/pilot-format gates remain tracked separately in OPEN_ITEMS.
 
 Milestones:
 
@@ -11,7 +11,7 @@ Milestones:
 - **F4 — Client REST read-only:** typed versioned GET adapter, exact host/operation allowlists, source-auth boundary and deterministic response mapping. Builder handoff SHA `da4bccf5519386eb68b33215e09fba87131e9720`; O-03 blocks sanctioned-customer live E2E only.
 - **F5 — Source-grounded AI:** provider abstraction, strict single-tool planning, policy, source provenance, deterministic financial analysis and mandatory audit. Current branch implements this to the provider-adapter boundary; O-04 blocks the live model run.
 - **F6 — Reports:** deterministic source-linked CSV/native XLSX/PDF artifacts, expiry/integrity metadata, and tenant/actor re-check at download. Current branch implements the generic artifact layer; O-09 controls pilot layout, Unicode/Dari PDF font packaging and retention/delivery policy.
-- **F7 — Voice:** Telegram voice notes STT/TTS through identical auth/policy/audit.
+- **F7 — Voice:** provider-neutral STT and optional TTS through the same tenant authorization and redacted audit boundary. Current branch implements the core provider boundary; O-09/O-05 block live provider + Telegram voice-note E2E.
 - **F8 — Dual deployment:** same core/version in cloud and local packaging, backup/restore and network hardening.
 - **F9 — Permissioned writes (separate release):** typed domain operations, step-up approval, idempotency and financial invariants.
 

@@ -10,11 +10,11 @@ The `app/` directory remains an isolated synthetic presentation demo. Production
 - **F1:** tenant/actor policy, scoped resources, credential references and durable redacted audit;
 - **F3:** read-only Google Drive/Sheets/XLSX connector;
 - **F4:** typed read-only customer REST API connector;
-- **F5:** provider-neutral, source-grounded AI planner/orchestrator with deterministic analysis;\n- **F6:** tenant-scoped source-linked CSV/XLSX/PDF report artifacts with expiry and integrity checks.
+- **F5:** provider-neutral, source-grounded AI planner/orchestrator with deterministic analysis;\n- **F6:** tenant-scoped source-linked CSV/XLSX/PDF report artifacts with expiry and integrity checks;\n- **F7:** provider-neutral STT and optional TTS with tenant re-authorization and redacted audit.
 
 F3 and F4 have exact-SHA green CI builder handoffs. Their sanctioned live external E2E tests remain gated by deployment inputs O-02 and O-03. F5 is being built to the model-provider boundary; O-04 controls the live LLM selection and data/privacy policy.
 
-Telegram and reports are implemented to credential/pilot-policy boundaries, but no live Telegram sandbox certification, approved production report template, voice, permissioned writes or production deployment certification is claimed yet.
+Telegram, reports and voice processing are implemented to their credential/provider/pilot-policy boundaries, but no live Telegram/voice sandbox certification, approved production report template, permissioned writes or production deployment certification is claimed yet.
 
 ## Safety architecture
 
