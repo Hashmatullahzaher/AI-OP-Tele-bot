@@ -55,7 +55,10 @@ class WritePlan:
             isinstance(key, str) for key in arguments
         ):
             raise WritePlanInvalid("write arguments must be an object")
-        serialized = json.dumps(arguments, ensure_ascii=False, separators=(",", ":"))
+        try:
+            serialized = json.dumps(arguments, ensure_ascii=False, separators=(",", ":"))
+        except (TypeError, ValueError) as exc:
+            raise WritePlanInvalid("write arguments are not valid JSON values") from exc
         if len(serialized) > 8_000:
             raise WritePlanInvalid("write proposal exceeds safe Telegram review size")
         return cls(
