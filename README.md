@@ -17,6 +17,7 @@ The `app/` directory remains an isolated synthetic presentation demo. Production
 - **F9:** permissioned customer create/update, procurement request create and balanced draft-voucher create with approval + idempotency.
 - **Excel Sandbox UAT:** a local XLSX fake-client source for Windows testing of the same four actions before a real customer API is connected.
 - **Telegram → Excel orchestration UAT:** paired private Telegram input, provider-neutral write proposal, separate payload-bound approval, then the same F9 controls and XLSX mutation. CI uses a deterministic synthetic planner until a live LLM is approved.
+- **Windows Setup Wizard UAT:** installable loopback dashboard can create the managed Excel workbook and securely store Telegram/OpenAI credentials using Windows DPAPI while keeping live connectors disabled until their acceptance gates pass.
 
 F3 and F4 have exact-SHA green CI builder handoffs. Their sanctioned live external E2E tests remain gated by deployment inputs O-02 and O-03. F5 is being built to the model-provider boundary; O-04 controls the live LLM selection and data/privacy policy.
 
@@ -60,7 +61,7 @@ python -m app.server
 
 Do not expose the demo publicly or use real company data in it.
 
-For the Windows Excel sandbox UAT, see `docs/05-operations/EXCEL_UAT.md`. For the Telegram planning/approval layer over that workbook, see `docs/05-operations/TELEGRAM_AI_EXCEL_UAT.md`.
+For the Windows Excel sandbox UAT, see `docs/05-operations/EXCEL_UAT.md`. For the Telegram planning/approval layer, see `docs/05-operations/TELEGRAM_AI_EXCEL_UAT.md`. For the installable configuration layer, see `docs/05-operations/WINDOWS_SETUP_WIZARD_UAT.md`.
 
 ## App Maker source of truth
 
