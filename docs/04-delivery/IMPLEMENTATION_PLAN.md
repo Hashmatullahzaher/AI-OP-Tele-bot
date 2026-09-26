@@ -1,9 +1,24 @@
 # Ordered delivery plan (App Maker)
 
-**Current stage: F0/F1 foundation build after owner authorization of a read-only Drive pilot.** The presentation demo remains isolated. The owner-approved synthetic Drive Sheet/XLSX corpus is provisioned; OS AI Core app-level OAuth is still open. Build/test the typed core plus tenant/policy/audit foundation before implementing F3 live Drive I/O.
+**Current stage: F3 Google Drive read-only implementation.** F0/F1 exact SHA `faf45ce316b1a6fbcdca25992c49d252259318a6` has green CI and passed lead-agent contract review with nonblocking notes. The isolated browser demo is not production evidence.
 
-**F0:** formalize typed tool and connector SDK, choose implementation stack after repo review, schema/contract tests and CI; preserve demo separately. **F1:** identity/tenant/permissions/audit/secret references. **F2:** Telegram private text and secure pairing in test sandbox. **F3:** Google Drive/Google Sheets/XLSX read-only with approved test corpus and source provenance. **F4:** versioned client REST API read-only adapter using one sandbox system. **F5:** per-tenant LLM provider abstraction and safe tool orchestration. **F6:** robust CSV/XLSX/PDF reporting, source citations and access-limited artifacts. **F7:** Telegram voice notes STT/TTS, Dari evaluation. **F8:** cloud and local container packaging, network/backup/security UAT. **F9 (separate release):** per-system approved typed writes, domain validations and accounting safeguards.
+Milestones:
 
-For each milestone: map IDs from `ACCEPTANCE_CONTRACT.md` -> implement in isolated branch -> run unit/integration/security/e2e as applicable -> builder self-audit -> commit exact SHA -> independent Codex/other-agent audit same SHA -> remediate confirmed contract defects -> merge only after checks. No new criteria during audit except material safety/integrity blocker.
+- **F0 — Shared foundation:** typed tool/connector SDK, schema contracts, local/cloud runtime contract, CI.
+- **F1 — Tenant identity/policy/audit:** tenant/actor/grants, scoped objects, secret references, durable redacted audit.
+- **F2 — Telegram private text:** secure pairing, private-chat routing, webhook/polling boundary, revoke/replay controls.
+- **F3 — Google Drive read-only:** Google Sheets/XLSX aliases, per-disclosure source re-check, bounded parser, provenance. Current branch implements this through the OAuth/token-provider boundary; O-02 blocks only live app-owned OAuth E2E.
+- **F4 — Client REST read-only:** typed versioned API adapter against one sanctioned sandbox system.
+- **F5 — Source-grounded AI:** provider abstraction and policy-constrained typed tool orchestration.
+- **F6 — Reports:** CSV then approved native XLSX/PDF with source provenance and access-limited artifacts.
+- **F7 — Voice:** Telegram voice notes STT/TTS through identical auth/policy/audit.
+- **F8 — Dual deployment:** same core/version in cloud and local packaging, backup/restore and network hardening.
+- **F9 — Permissioned writes (separate release):** typed domain operations, step-up approval, idempotency and financial invariants.
 
-**Current handoff:** F0/F1 code is ready for CI and independent audit on an exact feature-branch SHA. After confirmed F0/F1 acceptance, implement F3 against the sanctioned synthetic Drive corpus. App OAuth/scopes, token custody, revocation, and allowlist storage remain exact F3 blockers; do not substitute the ChatGPT connector session as production application credentials.
+For each milestone:
+
+`MAP CONTRACT -> IMPLEMENT -> TEST -> SELF-AUDIT -> FIX -> COMMIT EXACT SHA -> CI -> INDEPENDENT AUDIT -> REMEDIATE -> MERGE`
+
+The auditor must use the same `docs/04-delivery/ACCEPTANCE_CONTRACT.md`. New audit blockers outside that contract are limited to material security, privacy, data-loss, financial-integrity, unrecoverable-correctness or severe operational failures.
+
+**Next handoff:** obtain green CI for the F3 exact SHA. If green, mark the builder package `READY_FOR_INDEPENDENT_AUDIT`. Full F3 acceptance waits only on O-02 live app-owned OAuth/token-custody E2E. F4 may begin in parallel only after O-03 supplies a sanctioned API contract.
