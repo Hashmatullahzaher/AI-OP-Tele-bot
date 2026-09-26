@@ -77,7 +77,7 @@ class PendingApprovalStore:
 
     @staticmethod
     def _hash(approval_ref: str) -> str:
-        return hashlib.sha256(f"action-approval:{approval_ref}".encode("utf-8")).hexdigest()
+        return hashlib.sha256(f"action-approval:{approval_ref}".encode()).hexdigest()
 
     @staticmethod
     def _now(now_epoch: int | None) -> int:
