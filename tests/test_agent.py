@@ -79,6 +79,19 @@ class FakeTableConnector:
         )
 
 
+class FakeAudit:
+    def __init__(self):
+        self.records = []
+
+    def append_audit(self, **kwargs):
+        self.records.append(kwargs)
+        return len(self.records)
+
+
+def allow_all(context, manifest):
+    return None
+
+
 class FixedProvider:
     provider_name = "fake-provider"
 
@@ -114,7 +127,7 @@ def context():
     )
 
 
-def agent(provider, connector=None, policy_check=None, add_write=False):
+def agent(provider, connector=None, policy_check=None, audit_sink=None, add_write=False):
     connector = connector or FakeTableConnector()
     registry = CapabilityRegistry()
     registry.register(manifest(), connector)
@@ -127,7 +140,9 @@ def agent(provider, connector=None, policy_check=None, add_write=False):
         SourceGroundedAgent(
             provider=provider,
             registry=registry,
-            executor=ToolExecutor(registry, policy_check=policy_check),
+            executor=ToolExecutor(registry),
+            policy_check=policy_check or allow_all,
+            audit_sink=audit_sink or FakeAudit(),
         ),
         connector,
     )
@@ -144,7 +159,9 @@ class AgentTests(unittest.TestCase):
         self.assertEqual(answer.sources[0].source_id, "pilot-finance")
         self.assertEqual(answer.sources[0].revision, "rev-1")
         self.assertEqual(answer.text, "Retrieved 3 source row(s).")
-        self.assertEqual(answer.correlation_id, answer.correlation_id)
+        self.assertTrue(answer.correlation_id)
+        self.assertEqual(len(service.audit_sink.records), 1)
+        self.assertEqual(service.audit_sink.records[0]["event"], "agent.source_read")
 
     def test_financial_sum_uses_decimal_and_exact_filters(self):
         provider = FixedProvider(
@@ -254,9 +271,8 @@ class AgentTests(unittest.TestCase):
             tool_plan(arguments={"table": "transactions", "sql": "select *"})
         )
         service, connector = agent(provider)
-        with self.assertRaises(AgentError) as raised:
+        with self.assertRaises(AgentPlanInvalid):
             service.ask(message="dump data", context=context())
-        self.assertEqual(raised.exception.code, "SOURCE_SCHEMA_AMBIGUOUS")
         self.assertEqual(connector.calls, 0)
 
     def test_count_is_deterministic_after_server_side_filter(self):
