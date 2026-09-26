@@ -44,7 +44,10 @@ def _health_alive_at(port: int) -> bool:
             f"http://127.0.0.1:{port}/healthz", timeout=0.75
         ) as response:
             payload = json.loads(response.read().decode("utf-8"))
-            return payload.get("status") == "alive"
+            return (
+                payload.get("status") == "alive"
+                and payload.get("product") == "os-ai-core"
+            )
     except (OSError, ValueError, urllib.error.URLError):
         return False
 
