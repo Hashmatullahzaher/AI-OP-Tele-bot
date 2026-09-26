@@ -166,8 +166,8 @@ class CapabilityManifest:
         if timeout < 1 or timeout > 120:
             raise ContractError("timeout_seconds must be between 1 and 120")
         scopes = raw["required_scopes"]
-        if not isinstance(scopes, list) or not all(isinstance(v, str) and v for v in scopes):
-            raise ContractError("required_scopes must be a non-empty-string list")
+        if not isinstance(scopes, list) or not scopes or not all(isinstance(v, str) and v for v in scopes):
+            raise ContractError("required_scopes must be a non-empty list of non-empty strings")
         input_schema = raw["input_schema"]
         output_schema = raw["output_schema"]
         if not isinstance(input_schema, Mapping) or not isinstance(output_schema, Mapping):

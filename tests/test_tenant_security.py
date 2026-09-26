@@ -60,6 +60,15 @@ class TenantSecurityTests(unittest.TestCase):
     def test_policy_allows_exact_tenant_scope(self):
         self.store.authorize(self.alpha, manifest())
 
+    def test_cross_tenant_actor_cannot_authorize_read(self):
+        forged = ExecutionContext.issue(
+            tenant_id="beta",
+            actor_id="alpha-admin",
+            resource_scope=("drive:pilot",),
+        )
+        with self.assertRaises(PolicyDenied):
+            self.store.authorize(forged, manifest())
+
     def test_cross_tenant_report_and_cache_are_denied(self):
         self.store.put_scoped(tenant_id="beta", kind="report", object_id="r1", payload={"name": "secret"})
         self.store.put_scoped(tenant_id="beta", kind="cache", object_id="c1", payload={"value": 9})
@@ -77,6 +86,26 @@ class TenantSecurityTests(unittest.TestCase):
         )
         with self.assertRaises(PolicyDenied):
             self.store.credential_ref(context=self.alpha, owner_tenant_id="beta", connector_id="drive-1")
+
+    def test_credential_ref_requires_explicit_admin_grant(self):
+        self.store.register_connector(
+            tenant_id="alpha",
+            connector_id="drive-1",
+            connector_type="drive",
+            credential_ref="secretref:alpha-drive",
+        )
+        with self.assertRaises(PolicyDenied):
+            self.store.credential_ref(context=self.alpha, owner_tenant_id="alpha", connector_id="drive-1")
+        self.store.grant(
+            "alpha",
+            "alpha-admin",
+            "connector.credential_ref.read",
+            "connector:drive-1",
+        )
+        self.assertEqual(
+            self.store.credential_ref(context=self.alpha, owner_tenant_id="alpha", connector_id="drive-1"),
+            "secretref:alpha-drive",
+        )
 
     def test_only_opaque_secret_refs_are_accepted(self):
         with self.assertRaises(ValueError):
@@ -114,6 +143,14 @@ class TenantSecurityTests(unittest.TestCase):
         self.assertEqual(len(records), 1)
         self.assertEqual(records[0].event, "drive.read")
         self.assertTrue(self.store.verify_audit_chain("alpha"))
+
+    def test_audit_chain_detects_tampering(self):
+        self.store.append_audit(context=self.alpha, event="drive.read", result="OK")
+        self.store._db.execute(
+            "UPDATE audit_events SET event='tampered' WHERE tenant_id='alpha'"
+        )
+        self.store._db.commit()
+        self.assertFalse(self.store.verify_audit_chain("alpha"))
 
     def test_tenant_audit_queries_do_not_cross(self):
         self.store.append_audit(context=self.alpha, event="alpha.read", result="OK")

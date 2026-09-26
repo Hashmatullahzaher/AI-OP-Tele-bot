@@ -23,7 +23,7 @@ Objective local verification:
 ```text
 python -m compileall -q app osai
 python -m unittest discover -s tests -v
-RESULT: 26/26 PASS
+RESULT: 29/29 PASS
 ```
 
 The environment used for this builder run could not download Ruff/mypy packages because outbound package resolution was unavailable. Therefore lint/typecheck are configured for CI but **not claimed locally**. F0 is not marked fully accepted until CI and independent audit verify the exact commit SHA.

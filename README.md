@@ -30,4 +30,4 @@ Start with `docs/00-governance/DECISIONS.md`, `docs/00-governance/OPEN_ITEMS.md`
 
 ## Foundation verification
 
-Local builder verification: `python -m compileall -q app osai` and `python -m unittest discover -s tests -v` -> **26/26 tests pass**. Ruff/mypy are configured in GitHub Actions; acceptance still requires CI and independent audit of the exact SHA. See `docs/04-delivery/F0_F1_EVIDENCE.md`.
+Local builder verification: `python -m compileall -q app osai` and `python -m unittest discover -s tests -v` -> **29/29 tests pass**. Ruff/mypy are configured in GitHub Actions; acceptance still requires CI and independent audit of the exact SHA. See `docs/04-delivery/F0_F1_EVIDENCE.md`.

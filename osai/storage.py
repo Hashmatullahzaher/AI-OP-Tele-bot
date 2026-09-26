@@ -187,6 +187,18 @@ class TenantSecurityStore:
     ) -> str:
         self._same_tenant(context, owner_tenant_id)
         self._require_active_actor(context.tenant_id, context.actor_id)
+        allowed = self._db.execute(
+            "SELECT 1 FROM grants WHERE tenant_id=? AND actor_id=? AND capability=? "
+            "AND resource_scope IN (?, '*') LIMIT 1",
+            (
+                context.tenant_id,
+                context.actor_id,
+                "connector.credential_ref.read",
+                f"connector:{connector_id}",
+            ),
+        ).fetchone()
+        if allowed is None:
+            raise PolicyDenied("connector unavailable")
         row = self._db.execute(
             "SELECT credential_ref,state FROM connectors WHERE tenant_id=? AND connector_id=?",
             (context.tenant_id, connector_id),
