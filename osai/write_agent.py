@@ -39,7 +39,7 @@ class WritePlan:
     arguments: Mapping[str, JSONValue]
 
     @classmethod
-    def from_mapping(cls, raw: Mapping[str, Any]) -> "WritePlan":
+    def from_mapping(cls, raw: Mapping[str, Any]) -> WritePlan:
         allowed = {"schema_version", "action", "capability", "arguments"}
         if set(raw) != allowed:
             raise WritePlanInvalid("write plan fields are missing or unknown")
