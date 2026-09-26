@@ -116,8 +116,8 @@ class ReportSpec:
                     currencies.add(currency)
         if len(currencies) > 1:
             raise ReportSchemaError("report spans multiple currencies")
-        currency = next(iter(currencies)) if currencies else None
-        return _decimal_text(total), currency
+        single_currency: str | None = next(iter(currencies)) if currencies else None
+        return _decimal_text(total), single_currency
 
 
 @dataclass(frozen=True)
