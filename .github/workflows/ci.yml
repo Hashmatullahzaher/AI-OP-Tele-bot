@@ -21,7 +21,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - run: python -m pip install --upgrade pip
       - run: python -m pip install -r requirements-dev.txt
-      - run: ruff check osai tests/test_foundation.py tests/test_tenant_security.py tests/test_drive_connector.py
+      - run: ruff check osai tests/test_foundation.py tests/test_tenant_security.py tests/test_drive_connector.py tests/test_rest_api_connector.py
       - run: mypy osai
       - run: python -m compileall -q app osai
       - run: python -m unittest discover -s tests -v
