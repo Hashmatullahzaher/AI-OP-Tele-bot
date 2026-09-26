@@ -89,8 +89,17 @@ try {
         throw "Setup Wizard did not expose its in-memory CSRF token."
     }
     $csrf = $csrfMatch.Groups[1].Value
+    $accessPath = Join-Path $dataRoot "config\setup-access.token"
+    if (-not (Test-Path $accessPath)) {
+        throw "Setup administrator access token was not created."
+    }
+    $setupAccess = (Get-Content -Raw -LiteralPath $accessPath).Trim()
+    if ($setupAccess.Length -lt 40) {
+        throw "Setup administrator access token is invalid."
+    }
     $setupHeaders = @{
         "X-OSAI-CSRF" = $csrf
+        "X-OSAI-Setup-Access" = $setupAccess
         "Origin" = "http://127.0.0.1:8765"
     }
 
@@ -142,7 +151,8 @@ try {
         throw "A setup credential was persisted in plaintext."
     }
 
-    $status = Invoke-RestMethod -Uri "http://127.0.0.1:8765/api/setup/status" -TimeoutSec 5
+    $status = Invoke-RestMethod -Uri "http://127.0.0.1:8765/api/setup/status" `
+        -Headers @{ "X-OSAI-Setup-Access" = $setupAccess } -TimeoutSec 5
     if (-not $status.telegram_token_configured -or -not $status.openai_key_configured) {
         throw "Setup status did not report stored credential state."
     }
