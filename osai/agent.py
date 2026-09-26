@@ -334,7 +334,7 @@ def analyze_tool_result(
     for raw_row in row_values:
         if not isinstance(raw_row, list):
             raise AgentError("SOURCE_SCHEMA_AMBIGUOUS", "tool result row shape is invalid")
-        raw_cells = cast(list[Any], raw_row)
+        raw_cells = raw_row
         if len(raw_cells) != len(columns) or not all(isinstance(value, str) for value in raw_cells):
             raise AgentError("SOURCE_SCHEMA_AMBIGUOUS", "tool result row shape is invalid")
         rows.append(cast(list[str], raw_cells))
