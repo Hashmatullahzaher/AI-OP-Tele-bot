@@ -30,4 +30,4 @@ Start with `docs/00-governance/DECISIONS.md`, `docs/00-governance/OPEN_ITEMS.md`
 
 ## Foundation verification
 
-Current local builder verification: `python -m compileall -q app osai` and `python -m unittest discover -s tests -v` -> **43/43 tests pass**. F1 remediation SHA `b61d1e75a2c830bfaca4b0277c29d6bfa3006a35` passed GitHub Actions run `36217089400`. F3 still requires green CI on its own exact SHA and app-owned OAuth E2E before full acceptance.
+Current local builder verification: `python -m compileall -q app osai` and `python -m unittest discover -s tests -v` -> **43/43 tests pass**. F1 remediation SHA `b61d1e75a2c830bfaca4b0277c29d6bfa3006a35` passed GitHub Actions run `36217089400`. F3 implementation SHA `a1ba994ecd49cbf525b9f9cd4ff1e1c4abf35e3e` passed GitHub Actions run `36217414644` (Ruff, mypy, compileall and tests on Python 3.11/3.12). Full F3 acceptance still requires app-owned OAuth/token-custody/revocation E2E and independent audit.

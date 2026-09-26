@@ -21,4 +21,4 @@ For each milestone:
 
 The auditor must use the same `docs/04-delivery/ACCEPTANCE_CONTRACT.md`. New audit blockers outside that contract are limited to material security, privacy, data-loss, financial-integrity, unrecoverable-correctness or severe operational failures.
 
-**Next handoff:** obtain green CI for the F3 exact SHA. If green, mark the builder package `READY_FOR_INDEPENDENT_AUDIT`. Full F3 acceptance waits only on O-02 live app-owned OAuth/token-custody E2E. F4 may begin in parallel only after O-03 supplies a sanctioned API contract.
+**Current handoff:** F3 implementation SHA `a1ba994ecd49cbf525b9f9cd4ff1e1c4abf35e3e` has green GitHub CI (run `36217414644`) and is ready for independent audit. Full F3 acceptance still waits on O-02 app-owned OAuth/token-custody/revocation E2E. F4 remains blocked by O-03 until a sanctioned client API contract is supplied; F2 can proceed independently to its Telegram credential boundary without using real customer data.

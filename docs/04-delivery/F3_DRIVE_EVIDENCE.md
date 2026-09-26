@@ -1,9 +1,10 @@
 # F3 Google Drive read-only — builder evidence
 
-Status: **IMPLEMENTED TO CREDENTIAL BOUNDARY; LIVE APP-OAUTH E2E BLOCKED ONLY BY O-02**.
+Status: **IMPLEMENTED TO CREDENTIAL BOUNDARY; READY FOR INDEPENDENT AUDIT; LIVE APP-OAUTH E2E BLOCKED BY O-02**.
 
 Branch: `app-maker/f3-drive-readonly`
-Base SHA: `b61d1e75a2c830bfaca4b0277c29d6bfa3006a35`
+Foundation remediation SHA: `b61d1e75a2c830bfaca4b0277c29d6bfa3006a35`
+Verified F3 implementation SHA: `a1ba994ecd49cbf525b9f9cd4ff1e1c4abf35e3e`
 
 ## Implemented
 
@@ -19,26 +20,47 @@ Base SHA: `b61d1e75a2c830bfaca4b0277c29d6bfa3006a35`
 - duplicate/blank headers fail as `DriveSchemaAmbiguous` instead of allowing guessed calculations;
 - source revision, source type, sheet/table locator and alias are returned as provenance;
 - Google 401/403/404 become non-enumerating access denials; 429/5xx become source-unavailable failures;
-- OAuth access tokens are injected through a token-provider boundary and are never persisted by the connector.
+- OAuth access tokens are injected through a token-provider boundary and are never persisted by the connector;
+- CI lints the complete `tests` tree rather than only selected files.
 
 ## Automated builder verification
 
+Local builder run:
+
 ```text
-python -m compileall -q osai tests
+python -m compileall -q app osai tests
 python -m unittest discover -s tests -v
 RESULT: 43/43 PASS
 ```
 
-New negative tests cover raw-file-ID attempts, mismatched resource scope, parent-folder change, source ACL revocation, MIME mismatch, duplicate/blank headers, XLSX size/row limits and non-execution of formula text.
+GitHub Actions on implementation SHA `a1ba994ecd49cbf525b9f9cd4ff1e1c4abf35e3e`:
 
-Ruff/mypy are intentionally not claimed locally in this environment because those executables are unavailable. GitHub CI must verify the branch exact SHA.
+- run `36217414644`: **PASS**;
+- Python 3.11: PASS;
+- Python 3.12: PASS;
+- Ruff full `osai tests`: PASS;
+- mypy `osai`: PASS;
+- compileall: PASS;
+- unit suite: PASS.
+
+Negative tests cover raw-file-ID attempts, mismatched resource scope, parent-folder change, source ACL revocation, MIME mismatch, duplicate/blank headers, XLSX size/row limits and non-execution of formula text.
 
 ## Sanctioned live corpus validation
 
-The owner-approved Google Drive pilot folder remains synthetic/non-sensitive. Through the authorized Google Drive connection, the builder re-read all four native Sheet tabs (`Transactions`, `Accounts`, `Projects`, `Customers`) and the stored XLSX copy on 2026-09-26. Both file types were readable and the local bounded XLSX parser successfully parsed all four sheets from the exported pilot XLSX.
+The owner-approved Google Drive pilot folder contains only synthetic/non-sensitive data. On 2026-09-26 the authorized Drive connection successfully re-read:
 
-This validates the corpus and parser compatibility. It does **not** substitute for an app-owned OAuth credential. No private folder/file IDs, URLs, account email or tokens are committed.
+- `Transactions`: 10 rows including header;
+- `Accounts`: 8 rows including header;
+- `Projects`: 4 rows including header;
+- `Customers`: 4 rows including header;
+- the stored XLSX copy with the matching finance/operations corpus.
+
+The local bounded XLSX parser also parsed all four worksheets with matching headers. This validates the corpus and parser compatibility. It does **not** substitute for an app-owned OAuth credential. Private Drive IDs, URLs, account email and tokens are not committed.
 
 ## Remaining exact blocker for full F3 acceptance
 
-`O-02`: provision an OS AI Core Google OAuth client/consent configuration with read-only scopes, choose token custody/revocation implementation, and place the pilot aliases -> Drive IDs in tenant-scoped deployment configuration outside Git. Then run the same F3 tests against the application connector using the sanctioned pilot account and revoke/share-change scenarios.
+`O-02`: provision an OS AI Core Google OAuth client/consent configuration with least-privilege read-only scopes, choose token custody/revocation implementation, and place pilot aliases -> Drive IDs in tenant-scoped deployment configuration outside Git. Then run application-owned OAuth E2E against the sanctioned pilot account, including revoke/share-change scenarios.
+
+## Handoff
+
+Builder status: **READY_FOR_INDEPENDENT_AUDIT**. Audit the exact branch SHA containing this evidence against `docs/04-delivery/ACCEPTANCE_CONTRACT.md`. Full F3 acceptance remains blocked by O-02 even if the code audit passes.
