@@ -2,9 +2,9 @@
 
 OS AI Core is a **standalone, reusable product** to connect authorized company sources such as Google Drive/Sheets/XLSX and versioned customer REST APIs to an AI orchestration layer, with Telegram text/voice and web/desktop channels. It is *not* dependent on Al-Biruni or any particular ERP.
 
-## Current state — phase 0 presentation demo only
+## Current state — presentation demo + F0/F1 production foundation on feature branch
 
-This repository currently contains a **local, synthetic** browser mock of Telegram, spreadsheet data and a client API. There is **NO live Telegram, Google Drive, ERP API, LLM, OAuth, real RBAC, voice, native XLSX/PDF, or production cloud/local deployment**. Do not expose the mock server publicly or use real company data. A previously shared demo is preserved here to support owner review; the product-owner decisions have been recorded, but the demo walkthrough is still outstanding.
+The `app/` directory contains a **local, synthetic** browser mock of Telegram, spreadsheet data and a client API. The newer `osai/` package introduces the F0/F1 typed capability, local/cloud configuration, tenant/policy and durable-audit foundation. There is still **NO app-level live Telegram, Google Drive, ERP API, LLM, voice, native XLSX/PDF, or certified production deployment**. An owner-controlled synthetic Google Drive Sheet/XLSX test corpus has been provisioned for the upcoming F3 connector, but its private resource IDs and credentials are deliberately not committed. Do not expose the mock server publicly or use real company data.
 
 ### Run the demo (Python 3.10+, standard library only)
 
@@ -27,3 +27,7 @@ Demo: synthetic September sales/expenses and mock projects/accounts; source-grou
 ## App Maker source of truth
 
 Start with `docs/00-governance/DECISIONS.md`, `docs/00-governance/OPEN_ITEMS.md`, `docs/00-demo/DEMO_FEEDBACK.md`, `docs/04-delivery/ACCEPTANCE_CONTRACT.md`, `docs/04-delivery/IMPLEMENTATION_PLAN.md` and `prompts/BUILD_MASTER_PROMPT.md`. All production docs are **proposed** pending owner demo/pilot validation. Never commit tokens or client records.
+
+## Foundation verification
+
+Local builder verification: `python -m compileall -q app osai` and `python -m unittest discover -s tests -v` -> **26/26 tests pass**. Ruff/mypy are configured in GitHub Actions; acceptance still requires CI and independent audit of the exact SHA. See `docs/04-delivery/F0_F1_EVIDENCE.md`.

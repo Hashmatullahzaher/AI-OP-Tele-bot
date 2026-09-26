@@ -10,3 +10,4 @@
 | DEC-006 | Previous browser-based demo with two simulated connector families can be preserved for owner review. | PROPOSED | Demo not yet formally accepted; do not claim it meets production acceptance. |
 
 Decision changes require author, date, rationale and affected acceptance criteria in this file and `docs/00-governance/OPEN_ITEMS.md`.
+| DEC-007 | First sanctioned live-source pilot uses an owner-controlled Google Drive folder containing synthetic Google Sheets and XLSX files; no client production data. | CONFIRMED 2026-09-26 | Test corpus has been provisioned outside the public repository. Resource IDs and credentials are intentionally not committed. F3 remains read-only. |

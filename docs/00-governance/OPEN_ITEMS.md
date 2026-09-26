@@ -5,7 +5,7 @@ The owner approved the repository, **both connectors in stages**, and **one shar
 | ID | Unresolved input | Blocks only |
 |---|---|---|
 | O-01 | Formal review/acceptance of the browser demo and exact pilot user journeys. | Demo gate / production feature sign-off; docs and independent tests may proceed. |
-| O-02 | Google Workspace account owner, approved folder or test files, OAuth client setup/Drive scopes, token custody and revocation approach; use non-sensitive test data. | Live Drive connector end-to-end testing. |
+| O-02 | **PARTIALLY RESOLVED 2026-09-26:** owner-controlled pilot folder and non-sensitive Sheet/XLSX corpus are approved and provisioned. Still open: OS AI Core's own OAuth client/scopes, deployment token custody and revocation design. Resource IDs/credentials stay outside this public repo. | App-level live Drive connector end-to-end testing (test-corpus validation itself may proceed). |
 | O-03 | One test client-system OpenAPI/spec, sandbox endpoint, read-only test account, tenant identity and documented permissions. | Live ERP/API connector integration. |
 | O-04 | LLM provider, model, per-tenant privacy/data residency choices, token cost cap, whether text may leave customer host; language expectations. | Live LLM inference; typed mock orchestration can proceed. |
 | O-05 | Telegram bot token, webhook/public HTTPS vs polling, private-chat user pairing/identity provider, approval of data classification for messages. | Real Telegram end-to-end testing and exposure of actual customer data. |
