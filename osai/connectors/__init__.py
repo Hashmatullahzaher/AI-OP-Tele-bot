@@ -16,10 +16,9 @@ from .google_drive import (
     parse_xlsx_table,
 )
 from .rest_api import (
-    APIParameter,
     APIOperation,
+    APIParameter,
     ClientRESTConnector,
-    RESTSource,
     ResponseField,
     RestAccessDenied,
     RestConnectorError,
@@ -27,6 +26,7 @@ from .rest_api import (
     RestLimitExceeded,
     RestOperationNotAllowed,
     RestSchemaInvalid,
+    RESTSource,
     RestUnavailable,
     StaticHeaderAuthProvider,
     UrllibRestTransport,
