@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import socket
 import sys
 import threading
 import urllib.error
@@ -22,7 +23,7 @@ from .runtime import build_server, config_from_env, readiness_from_env, startup_
 from .setup_wizard import setup_access_token_for_runtime
 
 APP_NAME = "OS AI Core Portable"
-DEFAULT_PORT = "8766"
+RESERVED_PORTS = {8765, 8766}
 
 
 def portable_data_root(env: MutableMapping[str, str] | None = None) -> Path:
@@ -33,6 +34,42 @@ def portable_data_root(env: MutableMapping[str, str] | None = None) -> Path:
     return Path(base) / "OS AI Core Portable"
 
 
+def _state_path(env: MutableMapping[str, str] | None = None) -> Path:
+    return portable_data_root(env) / "config" / "runtime-port.txt"
+
+
+def _health_alive_at(port: int) -> bool:
+    try:
+        with urllib.request.urlopen(
+            f"http://127.0.0.1:{port}/healthz", timeout=0.75
+        ) as response:
+            payload = json.loads(response.read().decode("utf-8"))
+            return payload.get("status") == "alive"
+    except (OSError, ValueError, urllib.error.URLError):
+        return False
+
+
+def _existing_port(env: MutableMapping[str, str] | None = None) -> int | None:
+    path = _state_path(env)
+    try:
+        value = int(path.read_text(encoding="utf-8").strip())
+    except (OSError, ValueError):
+        return None
+    if value in RESERVED_PORTS or value < 1024 or value > 65535:
+        return None
+    return value if _health_alive_at(value) else None
+
+
+def _allocate_free_port() -> int:
+    for _ in range(20):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+            probe.bind(("127.0.0.1", 0))
+            port = int(probe.getsockname()[1])
+        if port not in RESERVED_PORTS:
+            return port
+    raise RuntimeError("could not allocate a free localhost port")
+
+
 def apply_portable_environment(
     env: MutableMapping[str, str] | None = None,
 ) -> MutableMapping[str, str]:
@@ -40,15 +77,38 @@ def apply_portable_environment(
     root = portable_data_root(target)
     target.setdefault("OSAI_PROFILE", "local")
     target.setdefault("OSAI_BIND_HOST", "127.0.0.1")
-    target.setdefault("OSAI_PORT", DEFAULT_PORT)
+    if "OSAI_PORT" not in target:
+        existing = _existing_port(target) if env is None else None
+        target["OSAI_PORT"] = str(existing or _allocate_free_port())
+    port = int(target["OSAI_PORT"])
+    if port in RESERVED_PORTS:
+        raise RuntimeError(f"portable runtime may not use reserved port {port}")
     target.setdefault("OSAI_DATABASE_PATH", str(root / "data" / "osai.sqlite3"))
     target.setdefault("OSAI_SECRET_BACKEND", "os_keyring")
     target.setdefault("OSAI_NETWORK_MODE", "offline")
     return target
 
 
+def _persist_runtime_port(port: int) -> None:
+    path = _state_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(str(port), encoding="utf-8")
+
+
+def _clear_runtime_port(port: int) -> None:
+    path = _state_path()
+    try:
+        if path.read_text(encoding="utf-8").strip() == str(port):
+            path.unlink()
+    except OSError:
+        return
+
+
 def dashboard_url() -> str:
-    return f"http://127.0.0.1:{os.environ.get('OSAI_PORT', DEFAULT_PORT)}/"
+    port = os.environ.get("OSAI_PORT")
+    if not port:
+        raise RuntimeError("portable runtime port is not initialized")
+    return f"http://127.0.0.1:{port}/"
 
 
 def setup_url() -> str:
@@ -63,13 +123,12 @@ def setup_url() -> str:
 
 
 def _health_alive() -> bool:
+    port = os.environ.get("OSAI_PORT")
+    if not port:
+        return False
     try:
-        with urllib.request.urlopen(
-            f"{dashboard_url()}healthz", timeout=1
-        ) as response:
-            payload = json.loads(response.read().decode("utf-8"))
-            return payload.get("status") == "alive"
-    except (OSError, ValueError, urllib.error.URLError):
+        return _health_alive_at(int(port))
+    except ValueError:
         return False
 
 
@@ -100,12 +159,14 @@ def serve() -> int:
     config = config_from_env()
     startup_check(config)
     server = build_server(config)
+    _persist_runtime_port(config.port)
     try:
         server.serve_forever(poll_interval=0.25)
     except KeyboardInterrupt:
         pass
     finally:
         server.server_close()
+        _clear_runtime_port(config.port)
     return 0
 
 
@@ -140,6 +201,7 @@ def run_gui() -> int:
         daemon=True,
     )
     worker.start()
+    _persist_runtime_port(config.port)
 
     import tkinter as tk
     from tkinter import messagebox
@@ -234,6 +296,7 @@ def run_gui() -> int:
             server.server_close()
             worker.join(timeout=10)
         finally:
+            _clear_runtime_port(config.port)
             root.destroy()
 
     tk.Button(
