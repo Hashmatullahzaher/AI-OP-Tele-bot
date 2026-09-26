@@ -295,6 +295,29 @@ class ActionTests(unittest.TestCase):
             self.execute("customer.create", payload)
         with self.assertRaises(ActionInProgress):
             self.execute("customer.create", payload, key="idem:87654321")
+
+        self.store.add_actor("alpha", "second-owner", role="TENANT_ADMIN")
+        self.store.grant(
+            "alpha",
+            "second-owner",
+            "customer.create",
+            f"client_api:{SOURCE}",
+        )
+        second_context = ExecutionContext.issue(
+            tenant_id="alpha",
+            actor_id="second-owner",
+            resource_scope=(f"client_api:{SOURCE}",),
+            session_assurance="telegram-step-up",
+        )
+        with self.assertRaises(ActionInProgress):
+            self.coordinator.execute(
+                context=second_context,
+                action="customer.create",
+                payload=payload,
+                approval_ref=APPROVAL,
+                idempotency_key="idem:second:1234",
+            )
+
         self.assertEqual(len(self.adapter.calls), 1)
         events = [item.event for item in self.store.audit_records("alpha")]
         self.assertIn("action.reconciliation_required", events)
