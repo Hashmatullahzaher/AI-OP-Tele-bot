@@ -8,6 +8,8 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
+import secrets
 import sqlite3
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -30,6 +32,16 @@ class AuditRecord:
     result: str
     created_at: str
     event_hash: str
+
+
+@dataclass(frozen=True)
+class TelegramBinding:
+    bot_alias: str
+    chat_id: int
+    telegram_user_id: int
+    tenant_id: str
+    actor_id: str
+    status: str
 
 
 class TenantSecurityStore:
@@ -107,6 +119,42 @@ class TenantSecurityStore:
             );
             CREATE INDEX IF NOT EXISTS idx_audit_tenant_seq
             ON audit_events(tenant_id, sequence);
+
+            CREATE TABLE IF NOT EXISTS telegram_pairing_challenges (
+                challenge_hash TEXT PRIMARY KEY,
+                bot_alias TEXT NOT NULL,
+                tenant_id TEXT NOT NULL,
+                actor_id TEXT NOT NULL,
+                expires_at INTEGER NOT NULL,
+                used_at INTEGER,
+                created_at INTEGER NOT NULL,
+                FOREIGN KEY (tenant_id, actor_id)
+                    REFERENCES actors(tenant_id, actor_id) ON DELETE CASCADE
+            );
+            CREATE INDEX IF NOT EXISTS idx_telegram_pairing_actor
+            ON telegram_pairing_challenges(tenant_id, actor_id, bot_alias);
+
+            CREATE TABLE IF NOT EXISTS telegram_bindings (
+                bot_alias TEXT NOT NULL,
+                chat_id INTEGER NOT NULL,
+                telegram_user_id INTEGER NOT NULL,
+                tenant_id TEXT NOT NULL,
+                actor_id TEXT NOT NULL,
+                status TEXT NOT NULL CHECK(status IN ('ACTIVE','REVOKED')),
+                paired_at INTEGER NOT NULL,
+                PRIMARY KEY (bot_alias, chat_id),
+                FOREIGN KEY (tenant_id, actor_id)
+                    REFERENCES actors(tenant_id, actor_id) ON DELETE CASCADE
+            );
+            CREATE INDEX IF NOT EXISTS idx_telegram_binding_actor
+            ON telegram_bindings(tenant_id, actor_id, status);
+
+            CREATE TABLE IF NOT EXISTS telegram_updates (
+                bot_alias TEXT NOT NULL,
+                update_id INTEGER NOT NULL,
+                received_at INTEGER NOT NULL,
+                PRIMARY KEY (bot_alias, update_id)
+            );
             """
         )
         self._db.commit()
@@ -236,6 +284,205 @@ class TenantSecurityStore:
         if not isinstance(parsed, dict):
             raise RuntimeError("stored scoped object is invalid")
         return parsed
+
+    @staticmethod
+    def _validate_bot_alias(bot_alias: str) -> None:
+        if not re.fullmatch(r"[a-z][a-z0-9_-]{2,63}", bot_alias):
+            raise ValueError("invalid bot_alias")
+
+    def create_telegram_pairing_challenge(
+        self,
+        *,
+        tenant_id: str,
+        actor_id: str,
+        bot_alias: str,
+        now_epoch: int,
+        ttl_seconds: int = 600,
+    ) -> str:
+        """Create one high-entropy, short-lived pairing code.
+
+        The plaintext code is returned once to the trusted admin workflow and is
+        never stored.  This method is an internal persistence primitive; the
+        caller must authorize the admin action before invoking it.
+        """
+
+        self._validate_bot_alias(bot_alias)
+        self._require_active_actor(tenant_id, actor_id)
+        if now_epoch < 0:
+            raise ValueError("now_epoch must be non-negative")
+        if ttl_seconds < 60 or ttl_seconds > 3600:
+            raise ValueError("ttl_seconds must be between 60 and 3600")
+        code = secrets.token_urlsafe(24)
+        challenge_hash = hashlib.sha256(f"{bot_alias}:{code}".encode("utf-8")).hexdigest()
+        self._db.execute(
+            """
+            INSERT INTO telegram_pairing_challenges(
+                challenge_hash,bot_alias,tenant_id,actor_id,expires_at,used_at,created_at
+            ) VALUES(?,?,?,?,?,NULL,?)
+            """,
+            (challenge_hash, bot_alias, tenant_id, actor_id, now_epoch + ttl_seconds, now_epoch),
+        )
+        self._db.commit()
+        return code
+
+    def consume_telegram_pairing_challenge(
+        self,
+        *,
+        bot_alias: str,
+        code: str,
+        telegram_user_id: int,
+        chat_id: int,
+        now_epoch: int,
+    ) -> TelegramBinding:
+        self._validate_bot_alias(bot_alias)
+        if not code or len(code) > 256:
+            raise PolicyDenied("pairing unavailable")
+        if telegram_user_id <= 0 or chat_id <= 0 or now_epoch < 0:
+            raise PolicyDenied("pairing unavailable")
+        challenge_hash = hashlib.sha256(f"{bot_alias}:{code}".encode("utf-8")).hexdigest()
+        try:
+            self._db.execute("BEGIN IMMEDIATE")
+            row = self._db.execute(
+                """
+                SELECT tenant_id,actor_id,expires_at,used_at
+                FROM telegram_pairing_challenges
+                WHERE challenge_hash=? AND bot_alias=?
+                """,
+                (challenge_hash, bot_alias),
+            ).fetchone()
+            if row is None or row["used_at"] is not None or int(row["expires_at"]) < now_epoch:
+                raise PolicyDenied("pairing unavailable")
+            tenant_id = str(row["tenant_id"])
+            actor_id = str(row["actor_id"])
+            self._require_active_actor(tenant_id, actor_id)
+            existing = self._db.execute(
+                "SELECT status FROM telegram_bindings WHERE bot_alias=? AND chat_id=?",
+                (bot_alias, chat_id),
+            ).fetchone()
+            if existing is not None and existing["status"] == "ACTIVE":
+                raise PolicyDenied("telegram chat already paired")
+            changed = self._db.execute(
+                """
+                UPDATE telegram_pairing_challenges
+                SET used_at=?
+                WHERE challenge_hash=? AND used_at IS NULL
+                """,
+                (now_epoch, challenge_hash),
+            ).rowcount
+            if changed != 1:
+                raise PolicyDenied("pairing unavailable")
+            if existing is None:
+                self._db.execute(
+                    """
+                    INSERT INTO telegram_bindings(
+                        bot_alias,chat_id,telegram_user_id,tenant_id,actor_id,status,paired_at
+                    ) VALUES(?,?,?,?,?,'ACTIVE',?)
+                    """,
+                    (bot_alias, chat_id, telegram_user_id, tenant_id, actor_id, now_epoch),
+                )
+            else:
+                self._db.execute(
+                    """
+                    UPDATE telegram_bindings
+                    SET telegram_user_id=?,tenant_id=?,actor_id=?,status='ACTIVE',paired_at=?
+                    WHERE bot_alias=? AND chat_id=? AND status='REVOKED'
+                    """,
+                    (telegram_user_id, tenant_id, actor_id, now_epoch, bot_alias, chat_id),
+                )
+            self._db.commit()
+        except Exception:
+            self._db.rollback()
+            raise
+        return TelegramBinding(
+            bot_alias=bot_alias,
+            chat_id=chat_id,
+            telegram_user_id=telegram_user_id,
+            tenant_id=tenant_id,
+            actor_id=actor_id,
+            status="ACTIVE",
+        )
+
+    def resolve_telegram_binding(
+        self,
+        *,
+        bot_alias: str,
+        telegram_user_id: int,
+        chat_id: int,
+    ) -> TelegramBinding:
+        self._validate_bot_alias(bot_alias)
+        if telegram_user_id <= 0 or chat_id <= 0:
+            raise PolicyDenied("telegram identity unavailable")
+        row = self._db.execute(
+            """
+            SELECT bot_alias,chat_id,telegram_user_id,tenant_id,actor_id,status
+            FROM telegram_bindings
+            WHERE bot_alias=? AND chat_id=? AND telegram_user_id=?
+            """,
+            (bot_alias, chat_id, telegram_user_id),
+        ).fetchone()
+        if row is None or row["status"] != "ACTIVE":
+            raise PolicyDenied("telegram identity unavailable")
+        self._require_active_actor(str(row["tenant_id"]), str(row["actor_id"]))
+        return TelegramBinding(
+            bot_alias=str(row["bot_alias"]),
+            chat_id=int(row["chat_id"]),
+            telegram_user_id=int(row["telegram_user_id"]),
+            tenant_id=str(row["tenant_id"]),
+            actor_id=str(row["actor_id"]),
+            status=str(row["status"]),
+        )
+
+    def revoke_telegram_binding(
+        self,
+        *,
+        tenant_id: str,
+        bot_alias: str,
+        chat_id: int,
+    ) -> None:
+        self._validate_bot_alias(bot_alias)
+        self._require_active_tenant(tenant_id)
+        changed = self._db.execute(
+            """
+            UPDATE telegram_bindings SET status='REVOKED'
+            WHERE tenant_id=? AND bot_alias=? AND chat_id=? AND status='ACTIVE'
+            """,
+            (tenant_id, bot_alias, chat_id),
+        ).rowcount
+        self._db.commit()
+        if changed != 1:
+            raise PolicyDenied("telegram identity unavailable")
+
+    def claim_telegram_update(
+        self,
+        *,
+        bot_alias: str,
+        update_id: int,
+        received_at: int,
+    ) -> None:
+        """Atomically claim one Telegram update ID; duplicates fail closed."""
+
+        self._validate_bot_alias(bot_alias)
+        if update_id < 0 or received_at < 0:
+            raise PolicyDenied("telegram update unavailable")
+        try:
+            self._db.execute(
+                "INSERT INTO telegram_updates(bot_alias,update_id,received_at) VALUES(?,?,?)",
+                (bot_alias, update_id, received_at),
+            )
+            self._db.commit()
+        except sqlite3.IntegrityError as exc:
+            self._db.rollback()
+            raise PolicyDenied("telegram update replayed") from exc
+
+    def prune_telegram_updates(self, *, before_epoch: int) -> int:
+        if before_epoch < 0:
+            raise ValueError("before_epoch must be non-negative")
+        changed = self._db.execute(
+            "DELETE FROM telegram_updates WHERE received_at < ?",
+            (before_epoch,),
+        ).rowcount
+        self._db.commit()
+        return changed
 
     def append_audit(
         self,
