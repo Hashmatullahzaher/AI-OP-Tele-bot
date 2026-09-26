@@ -1,17 +1,17 @@
 # Open items — authoritative blockers by feature
 
-The owner approved the repository, **both connectors in stages**, and **one shared core for cloud and customer-hosted/local** deployment. These are closed; do not reopen them without a new owner decision. All other items below remain OPEN unless separately signed off.
+The repository, staged connector strategy, shared local/cloud core and owner-controlled Drive pilot corpus are confirmed. Do not reopen those decisions without a new owner decision.
 
 | ID | Unresolved input | Blocks only |
 |---|---|---|
-| O-01 | Formal review/acceptance of the browser demo and exact pilot user journeys. | Demo gate / production feature sign-off; docs and independent tests may proceed. |
-| O-02 | **PARTIALLY RESOLVED 2026-09-26:** owner-controlled pilot folder and non-sensitive Sheet/XLSX corpus are approved and provisioned. Still open: OS AI Core's own OAuth client/scopes, deployment token custody and revocation design. Resource IDs/credentials stay outside this public repo. | App-level live Drive connector end-to-end testing (test-corpus validation itself may proceed). |
-| O-03 | One test client-system OpenAPI/spec, sandbox endpoint, read-only test account, tenant identity and documented permissions. | Live ERP/API connector integration. |
-| O-04 | LLM provider, model, per-tenant privacy/data residency choices, token cost cap, whether text may leave customer host; language expectations. | Live LLM inference; typed mock orchestration can proceed. |
-| O-05 | Telegram bot token, webhook/public HTTPS vs polling, private-chat user pairing/identity provider, approval of data classification for messages. | Real Telegram end-to-end testing and exposure of actual customer data. |
-| O-06 | User roles, approved Drive ACL intersections, payroll/HR/customer PII handling, retention/deletion, audit retention and company-specific report sharing. | Production rollout with real sensitive data. |
-| O-07 | For future writes, precise operations/approval limits/ledger invariants and authenticated out-of-band step-up process. | All production mutation capabilities. Read-only stays available. |
-| O-08 | Hosting locations, target OS/hardware, cloud provider, local network egress, secrets manager, backup/restore, monitoring and support/billing model. | Deployment certification, not connector contracts. |
-| O-09 | First-pilot native XLSX/PDF requirements, voice STT/TTS provider and Dari evaluation dataset, report delivery retention. | Native report and voice acceptance. |
+| O-01 | Formal visual acceptance of the browser demo and exact presentation journeys. | Demo gate only; production foundation/connector engineering may proceed from the documented contract. |
+| O-02 | Pilot folder/files are provisioned and validated. Remaining: OS AI Core OAuth client/consent with read-only Drive/Sheets scopes, actor/tenant token custody + refresh/revocation implementation, and deployment-only alias -> Drive ID mapping. | Full live app-owned Drive E2E acceptance. Connector implementation/tests and external corpus validation may proceed. |
+| O-03 | One sanctioned client-system OpenAPI/spec, sandbox endpoint, read-only test account, tenant identity and documented permissions. | F4 live REST connector integration. |
+| O-04 | LLM provider/model, per-tenant privacy/data-residency policy, token cost cap and whether content may leave customer host. | F5 live LLM inference. Typed orchestration can be built without choosing a provider. |
+| O-05 | Telegram bot token, webhook/public HTTPS vs polling, private-chat user pairing/identity provider and message data classification. | F2 real Telegram E2E and any real customer data over Telegram. |
+| O-06 | Production user-role matrix, Drive ACL intersection policy, PII/HR/payroll handling, retention/deletion, audit retention and report-sharing policy. | Production rollout with sensitive data. |
+| O-07 | For future writes: exact operations, approval limits, ledger invariants and authenticated out-of-band step-up process. | F9 mutation capabilities only. Read-only remains available. |
+| O-08 | Hosting locations, target OS/hardware, cloud provider, local network egress, secrets manager, backup/restore, monitoring and support/billing model. | F8 deployment certification. |
+| O-09 | Native XLSX/PDF report requirements, voice STT/TTS provider, Dari evaluation set and report-delivery retention. | F6/F7 acceptance. |
 
-Do not request API keys, Google tokens, bot tokens, passwords or private documents in chat. Store secrets in a vetted deployment secret store, not GitHub or environment samples with real values. Missing inputs must not be invented.
+Do not request or commit API keys, OAuth tokens, bot tokens, passwords or private customer documents. Missing official inputs block only their dependent feature.
