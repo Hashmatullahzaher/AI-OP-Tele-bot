@@ -319,11 +319,11 @@ class ActionJournal:
             pending = self._db.execute(
                 """
                 SELECT idempotency_key FROM action_requests
-                WHERE tenant_id=? AND actor_id=? AND action=? AND payload_digest=?
+                WHERE tenant_id=? AND action=? AND payload_digest=?
                   AND status='IN_PROGRESS'
                 LIMIT 1
                 """,
-                (tenant_id, actor_id, action, payload_digest),
+                (tenant_id, action, payload_digest),
             ).fetchone()
             if pending is not None and str(pending["idempotency_key"]) != idempotency_key:
                 raise ActionInProgress("matching action is pending reconciliation")
