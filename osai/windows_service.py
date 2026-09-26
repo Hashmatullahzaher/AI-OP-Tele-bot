@@ -119,7 +119,7 @@ def _run_service_dispatcher() -> int:
         return 2
 
     advapi32 = ctypes.WinDLL("Advapi32", use_last_error=True)  # type: ignore[attr-defined]
-    winfunctype = getattr(ctypes, "WINFUNCTYPE")
+    winfunctype = ctypes.WINFUNCTYPE  # type: ignore[attr-defined]
     handler_type = winfunctype(
         wintypes.DWORD,
         wintypes.DWORD,
