@@ -14,7 +14,7 @@ class PortableLocalTests(unittest.TestCase):
             apply_portable_environment(env)
             self.assertEqual(env["OSAI_PROFILE"], "local")
             self.assertEqual(env["OSAI_BIND_HOST"], "127.0.0.1")
-            self.assertEqual(env["OSAI_PORT"], "8765")
+            self.assertEqual(env["OSAI_PORT"], "8766")
             self.assertEqual(env["OSAI_NETWORK_MODE"], "offline")
             self.assertEqual(env["OSAI_SECRET_BACKEND"], "os_keyring")
             self.assertEqual(
