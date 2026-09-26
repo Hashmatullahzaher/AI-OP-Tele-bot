@@ -40,7 +40,7 @@ jobs:
             $ready = $false
             for ($i = 0; $i -lt 30; $i++) {
               try {
-                $health = Invoke-RestMethod -Uri "http://127.0.0.1:8765/healthz" -TimeoutSec 2
+                $health = Invoke-RestMethod -Uri "http://127.0.0.1:8766/healthz" -TimeoutSec 2
                 if ($health.status -eq "alive") { $ready = $true; break }
               } catch {
                 Start-Sleep -Milliseconds 500
@@ -48,12 +48,12 @@ jobs:
             }
             if (-not $ready) { throw "Portable localhost runtime did not become ready." }
 
-            $dashboard = Invoke-WebRequest -Uri "http://127.0.0.1:8765/" -TimeoutSec 5
+            $dashboard = Invoke-WebRequest -Uri "http://127.0.0.1:8766/" -TimeoutSec 5
             if ($dashboard.Content -notmatch "Local Operator Dashboard") {
               throw "Portable runtime did not serve the operator dashboard."
             }
 
-            $setup = Invoke-WebRequest -Uri "http://127.0.0.1:8765/setup" -TimeoutSec 5
+            $setup = Invoke-WebRequest -Uri "http://127.0.0.1:8766/setup" -TimeoutSec 5
             if ($setup.Content -notmatch "OS AI Core Setup") {
               throw "Portable runtime did not serve the setup wizard."
             }
