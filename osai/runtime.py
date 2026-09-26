@@ -45,13 +45,14 @@ small{color:#64748b}code{background:#f1f5f9;padding:2px 6px;border-radius:6px}.o
 <div class="shell">
 <div class="card"><div class="row"><div><h1>OS AI Core</h1><small>Local Operator Dashboard</small></div>
 <span id="health" class="pill">Checking...</span></div></div>
-<div class="card"><h2>Runtime</h2><p>This page is served by the installed Core, not the demo application.</p>
-<p>Local endpoint: <code>http://127.0.0.1:8765</code></p><p id="ready">Readiness: checking...</p></div>
+<div class="card"><h2>Runtime</h2><p>This page is served by the local Core runtime, not the demo application.</p>
+<p>Local endpoint: <code id="endpoint"></code></p><p id="ready">Readiness: checking...</p></div>
 <div class="card"><h2>Security boundary</h2><p>The Windows local profile binds to loopback by default. No public firewall
 rule is created by the installer. Telegram, hosted AI, Drive, and customer APIs stay unavailable until separately configured.</p></div>
-<div class="card"><h2>Configuration</h2><p>Use the <strong>OS AI Core Setup</strong> shortcut from the Windows Start Menu. Setup requires administrator approval and is not opened from an ordinary browser link.</p></div>
+<div class="card"><h2>Configuration</h2><p>Open Setup from the launcher for your deployment. Installer mode uses an administrator-gated shortcut; Portable mode uses its local control window.</p></div>
 </div>
 <script>
+document.getElementById('endpoint').textContent=location.origin;
 async function refresh(){
  try{const h=await fetch('/healthz',{cache:'no-store'});const j=await h.json();
  const e=document.getElementById('health');e.textContent=j.status==='alive'?'Running':'Unavailable';
