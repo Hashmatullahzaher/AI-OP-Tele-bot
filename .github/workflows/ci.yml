@@ -76,3 +76,10 @@ jobs:
         shell: pwsh
         run: |
           python -m osai.excel_uat smoke --path "$env:RUNNER_TEMP\OS-AI-Core-Excel-UAT.xlsx" --db "$env:RUNNER_TEMP\OS-AI-Core-Excel-UAT.sqlite3"
+      - name: Upload Excel UAT workbook
+        uses: actions/upload-artifact@v4
+        with:
+          name: os-ai-core-excel-uat
+          path: ${{ runner.temp }}/OS-AI-Core-Excel-UAT.xlsx
+          if-no-files-found: error
+          retention-days: 7
