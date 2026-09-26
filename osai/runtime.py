@@ -13,9 +13,12 @@ import os
 from collections.abc import Mapping
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from .config import RuntimeConfig
 from .deployment import ReadinessReport, evaluate_readiness
+from .setup_config import SetupError, SetupValidationError
+from .setup_wizard import SetupWebController, setup_manager_for_runtime
 from .storage import TenantSecurityStore
 
 CORE_VERSION = "0.1.0"
@@ -42,6 +45,8 @@ small{color:#64748b}code{background:#f1f5f9;padding:2px 6px;border-radius:6px}.o
 <p>Local endpoint: <code>http://127.0.0.1:8765</code></p><p id="ready">Readiness: checking...</p></div>
 <div class="card"><h2>Security boundary</h2><p>The Windows local profile binds to loopback by default. No public firewall
 rule is created by the installer. Telegram, hosted AI, Drive, and customer APIs stay unavailable until separately configured.</p></div>
+<div class="card"><h2>Configuration</h2><p>Use the local Setup Wizard to prepare Excel, Telegram credentials, and the AI provider.</p>
+<p><a href="/setup" style="display:inline-block;padding:10px 14px;background:#1d4ed8;color:white;border-radius:9px;text-decoration:none;font-weight:600">Open Setup Wizard</a></p></div>
 </div>
 <script>
 async function refresh(){
@@ -125,12 +130,95 @@ class _HealthHandler(BaseHTTPRequestHandler):
             report = readiness_from_env()
             self._json(200 if report.ready else 503, report.as_dict())
             return
+        if self.path == "/setup":
+            controller = self._setup_controller()
+            if controller is None or not self._trusted_loopback_host():
+                self._json(404, {"status": "not_found"})
+                return
+            self._html(200, controller.render())
+            return
+        if self.path == "/api/setup/status":
+            controller = self._setup_controller()
+            if controller is None or not self._trusted_loopback_host():
+                self._json(404, {"status": "not_found"})
+                return
+            self._json(200, controller.status())
+            return
         if self.path == "/favicon.ico":
             self.send_response(204)
             self._security_headers()
             self.end_headers()
             return
         self._json(404, {"status": "not_found"})
+
+    def do_POST(self) -> None:  # noqa: N802
+        controller = self._setup_controller()
+        if controller is None or not self.path.startswith("/api/setup"):
+            self._json(404, {"status": "not_found"})
+            return
+        if not self._trusted_loopback_host() or not self._trusted_origin():
+            self._json(403, {"error": "setup request rejected"})
+            return
+        if not controller.verify_csrf(self.headers.get("X-OSAI-CSRF")):
+            self._json(403, {"error": "setup request rejected"})
+            return
+        content_type = self.headers.get("Content-Type", "")
+        if not content_type.casefold().startswith("application/json"):
+            self._json(415, {"error": "application/json required"})
+            return
+        try:
+            length = int(self.headers.get("Content-Length", "0"))
+        except ValueError:
+            self._json(400, {"error": "invalid request length"})
+            return
+        if length < 0 or length > 32768:
+            self._json(413, {"error": "setup request too large"})
+            return
+        try:
+            raw = self.rfile.read(length)
+            parsed = json.loads(raw.decode("utf-8") or "{}")
+            if not isinstance(parsed, dict) or not all(isinstance(key, str) for key in parsed):
+                raise SetupValidationError("setup request must be an object")
+            if self.path == "/api/setup":
+                result = controller.apply(parsed)
+            elif self.path == "/api/setup/excel/init":
+                if parsed:
+                    raise SetupValidationError("Excel initialization request must be empty")
+                result = controller.initialize_excel()
+            else:
+                self._json(404, {"status": "not_found"})
+                return
+        except (UnicodeDecodeError, json.JSONDecodeError, SetupValidationError) as exc:
+            self._json(400, {"error": str(exc)})
+            return
+        except SetupError:
+            self._json(500, {"error": "setup service unavailable"})
+            return
+        self._json(200, result)
+
+    def _setup_controller(self) -> SetupWebController | None:
+        return getattr(self.server, "setup_controller", None)
+
+    def _trusted_loopback_host(self) -> bool:
+        host = self.headers.get("Host", "").casefold().strip()
+        port = int(self.server.server_address[1])
+        return host in {f"127.0.0.1:{port}", f"localhost:{port}", f"[::1]:{port}"}
+
+    def _trusted_origin(self) -> bool:
+        origin = self.headers.get("Origin", "").strip()
+        try:
+            parsed = urlsplit(origin)
+        except ValueError:
+            return False
+        if parsed.scheme != "http" or parsed.username or parsed.password:
+            return False
+        port = int(self.server.server_address[1])
+        try:
+            origin_port = parsed.port
+        except ValueError:
+            return False
+        host = (parsed.hostname or "").casefold().rstrip(".")
+        return host in {"127.0.0.1", "localhost", "::1"} and origin_port == port
 
     def log_message(self, format: str, *args: object) -> None:
         return
@@ -166,7 +254,15 @@ class _HealthHandler(BaseHTTPRequestHandler):
 
 
 def build_server(config: RuntimeConfig) -> ThreadingHTTPServer:
-    return ThreadingHTTPServer((config.bind_host, config.port), _HealthHandler)
+    server = ThreadingHTTPServer((config.bind_host, config.port), _HealthHandler)
+    controller: SetupWebController | None = None
+    if config.profile == "local" and (config.secret_backend == "test" or os.name == "nt"):
+        controller = SetupWebController(
+            config=config,
+            manager=setup_manager_for_runtime(config),
+        )
+    setattr(server, "setup_controller", controller)
+    return server
 
 
 def main() -> int:
