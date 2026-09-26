@@ -83,3 +83,16 @@ jobs:
           path: ${{ runner.temp }}/OS-AI-Core-Excel-UAT.xlsx
           if-no-files-found: error
           retention-days: 7
+      - name: Run Telegram planner approval to Excel UAT
+        shell: pwsh
+        run: |
+          python -m osai.telegram_excel_uat --path "$env:RUNNER_TEMP\Telegram-AI-Excel-UAT.xlsx" --db "$env:RUNNER_TEMP\Telegram-AI-Excel-UAT.sqlite3" --transcript "$env:RUNNER_TEMP\Telegram-AI-Excel-UAT.json"
+      - name: Upload Telegram AI Excel UAT evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: os-ai-core-telegram-ai-excel-uat
+          path: |
+            ${{ runner.temp }}/Telegram-AI-Excel-UAT.xlsx
+            ${{ runner.temp }}/Telegram-AI-Excel-UAT.json
+          if-no-files-found: error
+          retention-days: 7
