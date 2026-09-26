@@ -30,16 +30,17 @@ Name: "desktopicon"; Description: "Create a desktop shortcut"; GroupDescription:
 Source: "..\..\dist\{#MyAppExeName}"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\..\scripts\windows\install-service.ps1"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\..\scripts\windows\uninstall-service.ps1"; DestDir: "{app}"; Flags: ignoreversion
+Source: "..\..\scripts\windows\open-setup.ps1"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
-Name: "{group}\OS AI Core Setup"; Filename: "http://127.0.0.1:8765/setup"
+Name: "{group}\OS AI Core Setup"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoLogo -NoProfile -ExecutionPolicy Bypass -File ""{app}\open-setup.ps1"""
 Name: "{group}\OS AI Core Dashboard"; Filename: "http://127.0.0.1:8765/"
-Name: "{autodesktop}\OS AI Core"; Filename: "http://127.0.0.1:8765/setup"; Tasks: desktopicon
+Name: "{autodesktop}\OS AI Core"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoLogo -NoProfile -ExecutionPolicy Bypass -File ""{app}\open-setup.ps1"""; Tasks: desktopicon
 Name: "{group}\Uninstall OS AI Core"; Filename: "{uninstallexe}"
 
 [Run]
 Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File ""{app}\install-service.ps1"" -InstallDir ""{app}"""; Flags: runhidden waituntilterminated
-Filename: "http://127.0.0.1:8765/setup"; Description: "Open the OS AI Core Setup Wizard"; Flags: shellexec postinstall skipifsilent unchecked
+Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoLogo -NoProfile -ExecutionPolicy Bypass -File ""{app}\open-setup.ps1"""; Description: "Open the OS AI Core Setup Wizard"; Flags: postinstall skipifsilent unchecked
 
 [UninstallRun]
 Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File ""{app}\uninstall-service.ps1"""; Flags: runhidden waituntilterminated
