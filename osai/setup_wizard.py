@@ -16,6 +16,7 @@ from .setup_config import (
     SetupError,
     SetupManager,
     SetupStatus,
+    SecretStore,
     SetupValidationError,
     WindowsDpapiSecretStore,
 )
@@ -33,6 +34,7 @@ def runtime_data_root(config: RuntimeConfig) -> Path:
 def setup_manager_for_runtime(config: RuntimeConfig) -> SetupManager:
     root = runtime_data_root(config)
     settings_store = JsonSetupStore(root / "config" / "settings.json")
+    secret_store: SecretStore
     if config.secret_backend == "test":
         secret_store = MemorySecretStore()
     elif config.secret_backend == "os_keyring":
