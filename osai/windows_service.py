@@ -16,6 +16,7 @@ import threading
 from collections.abc import MutableMapping
 from ctypes import wintypes
 from pathlib import Path
+from typing import Any, cast
 
 from .runtime import build_server, config_from_env, readiness_from_env, startup_check
 
@@ -118,8 +119,9 @@ def _run_service_dispatcher() -> int:
         print("Windows service mode is available only on Windows.", file=sys.stderr)
         return 2
 
-    advapi32 = ctypes.WinDLL("Advapi32", use_last_error=True)  # type: ignore[attr-defined]
-    winfunctype = ctypes.WINFUNCTYPE  # type: ignore[attr-defined]
+    ctypes_platform = cast(Any, ctypes)
+    advapi32 = ctypes_platform.WinDLL("Advapi32", use_last_error=True)
+    winfunctype = ctypes_platform.WINFUNCTYPE
     handler_type = winfunctype(
         wintypes.DWORD,
         wintypes.DWORD,
@@ -225,7 +227,7 @@ def _run_service_dispatcher() -> int:
     ok = advapi32.StartServiceCtrlDispatcherW(table)
     if ok:
         return 0
-    error = ctypes.get_last_error()  # type: ignore[attr-defined]
+    error = ctypes_platform.get_last_error()
     if error == ERROR_FAILED_SERVICE_CONTROLLER_CONNECT:
         print("This command must be launched by the Windows Service Control Manager.", file=sys.stderr)
     else:
