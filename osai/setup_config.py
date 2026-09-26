@@ -244,6 +244,7 @@ class WindowsDpapiSecretStore:
     """DPAPI-protected JSON secret store for the Windows service account."""
 
     _CRYPTPROTECT_UI_FORBIDDEN = 0x1
+    _CRYPTPROTECT_LOCAL_MACHINE = 0x4
 
     def __init__(self, path: str | Path) -> None:
         if os.name != "nt":
@@ -252,6 +253,28 @@ class WindowsDpapiSecretStore:
         self._ctypes = cast(Any, ctypes)
         self._crypt32 = self._ctypes.WinDLL("Crypt32", use_last_error=True)
         self._kernel32 = self._ctypes.WinDLL("Kernel32", use_last_error=True)
+        self._crypt32.CryptProtectData.argtypes = [
+            ctypes.POINTER(_DataBlob),
+            wintypes.LPCWSTR,
+            ctypes.POINTER(_DataBlob),
+            wintypes.LPVOID,
+            wintypes.LPVOID,
+            wintypes.DWORD,
+            ctypes.POINTER(_DataBlob),
+        ]
+        self._crypt32.CryptProtectData.restype = wintypes.BOOL
+        self._crypt32.CryptUnprotectData.argtypes = [
+            ctypes.POINTER(_DataBlob),
+            ctypes.POINTER(wintypes.LPWSTR),
+            ctypes.POINTER(_DataBlob),
+            wintypes.LPVOID,
+            wintypes.LPVOID,
+            wintypes.DWORD,
+            ctypes.POINTER(_DataBlob),
+        ]
+        self._crypt32.CryptUnprotectData.restype = wintypes.BOOL
+        self._kernel32.LocalFree.argtypes = [wintypes.HLOCAL]
+        self._kernel32.LocalFree.restype = wintypes.HLOCAL
 
     @staticmethod
     def _name(name: str) -> str:
@@ -272,7 +295,7 @@ class WindowsDpapiSecretStore:
             None,
             None,
             None,
-            self._CRYPTPROTECT_UI_FORBIDDEN,
+            self._CRYPTPROTECT_UI_FORBIDDEN | self._CRYPTPROTECT_LOCAL_MACHINE,
             ctypes.byref(output),
         )
         if not ok:
@@ -295,7 +318,7 @@ class WindowsDpapiSecretStore:
             None,
             None,
             None,
-            self._CRYPTPROTECT_UI_FORBIDDEN,
+            self._CRYPTPROTECT_UI_FORBIDDEN | self._CRYPTPROTECT_LOCAL_MACHINE,
             ctypes.byref(output),
         )
         if not ok:
@@ -438,26 +461,42 @@ class SetupManager:
     ) -> SetupStatus:
         settings = SetupSettings.from_mapping(settings_raw)
 
+        telegram_value: str | None = None
         if telegram_bot_token is not None:
-            value = telegram_bot_token.strip()
-            if _TELEGRAM_TOKEN_RE.fullmatch(value) is None:
+            telegram_value = telegram_bot_token.strip()
+            if _TELEGRAM_TOKEN_RE.fullmatch(telegram_value) is None:
                 raise SetupValidationError("Telegram bot token format is invalid")
-            self.secret_store.set(self.TELEGRAM_SECRET, value)
+
+        openai_value: str | None = None
+        if openai_api_key is not None:
+            openai_value = openai_api_key.strip()
+            if (
+                len(openai_value) < 20
+                or len(openai_value) > 512
+                or any(ch.isspace() for ch in openai_value)
+            ):
+                raise SetupValidationError("OpenAI API key format is invalid")
+
+        telegram_will_exist = telegram_value is not None or (
+            self.secret_store.configured(self.TELEGRAM_SECRET) and not clear_telegram_token
+        )
+        openai_will_exist = openai_value is not None or (
+            self.secret_store.configured(self.OPENAI_SECRET) and not clear_openai_api_key
+        )
+        if settings.telegram_enabled and not telegram_will_exist:
+            raise SetupValidationError("Telegram is enabled but no bot token is configured")
+        if settings.llm_provider == "openai" and not openai_will_exist:
+            raise SetupValidationError("OpenAI is selected but no API key is configured")
+
+        if telegram_value is not None:
+            self.secret_store.set(self.TELEGRAM_SECRET, telegram_value)
         elif clear_telegram_token:
             self.secret_store.delete(self.TELEGRAM_SECRET)
 
-        if openai_api_key is not None:
-            value = openai_api_key.strip()
-            if len(value) < 20 or len(value) > 512 or any(ch.isspace() for ch in value):
-                raise SetupValidationError("OpenAI API key format is invalid")
-            self.secret_store.set(self.OPENAI_SECRET, value)
+        if openai_value is not None:
+            self.secret_store.set(self.OPENAI_SECRET, openai_value)
         elif clear_openai_api_key:
             self.secret_store.delete(self.OPENAI_SECRET)
-
-        if settings.telegram_enabled and not self.secret_store.configured(self.TELEGRAM_SECRET):
-            raise SetupValidationError("Telegram is enabled but no bot token is configured")
-        if settings.llm_provider == "openai" and not self.secret_store.configured(self.OPENAI_SECRET):
-            raise SetupValidationError("OpenAI is selected but no API key is configured")
 
         self.settings_store.save(settings)
         return self.status()
