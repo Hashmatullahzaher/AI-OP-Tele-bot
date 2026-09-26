@@ -32,13 +32,14 @@ Source: "..\..\scripts\windows\install-service.ps1"; DestDir: "{app}"; Flags: ig
 Source: "..\..\scripts\windows\uninstall-service.ps1"; DestDir: "{app}"; Flags: ignoreversion
 
 [Icons]
+Name: "{group}\OS AI Core Setup"; Filename: "http://127.0.0.1:8765/setup"
 Name: "{group}\OS AI Core Dashboard"; Filename: "http://127.0.0.1:8765/"
-Name: "{autodesktop}\OS AI Core Dashboard"; Filename: "http://127.0.0.1:8765/"; Tasks: desktopicon
+Name: "{autodesktop}\OS AI Core"; Filename: "http://127.0.0.1:8765/setup"; Tasks: desktopicon
 Name: "{group}\Uninstall OS AI Core"; Filename: "{uninstallexe}"
 
 [Run]
 Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File ""{app}\install-service.ps1"" -InstallDir ""{app}"""; Flags: runhidden waituntilterminated
-Filename: "http://127.0.0.1:8765/"; Description: "Open the OS AI Core Dashboard"; Flags: shellexec postinstall skipifsilent unchecked
+Filename: "http://127.0.0.1:8765/setup"; Description: "Open the OS AI Core Setup Wizard"; Flags: shellexec postinstall skipifsilent unchecked
 
 [UninstallRun]
 Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File ""{app}\uninstall-service.ps1"""; Flags: runhidden waituntilterminated
