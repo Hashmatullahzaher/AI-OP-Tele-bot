@@ -269,8 +269,8 @@ class GoogleDriveConnector:
         data: dict[str, JSONValue] = {
             "resource_alias": resource.alias,
             "table_alias": table.alias,
-            "columns": columns,
-            "rows": rows,
+            "columns": cast(JSONValue, columns),
+            "rows": cast(JSONValue, rows),
             "row_count": len(rows),
             "revision": revision,
             "source_kind": source_type,
