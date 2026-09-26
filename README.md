@@ -10,11 +10,11 @@ The `app/` directory remains an isolated synthetic presentation demo. Production
 - **F1:** tenant/actor policy, scoped resources, credential references and durable redacted audit;
 - **F3:** read-only Google Drive/Sheets/XLSX connector;
 - **F4:** typed read-only customer REST API connector;
-- **F5:** provider-neutral, source-grounded AI planner/orchestrator with deterministic analysis;\n- **F6:** tenant-scoped source-linked CSV/XLSX/PDF report artifacts with expiry and integrity checks.
+- **F5:** provider-neutral, source-grounded AI planner/orchestrator with deterministic analysis;\n- **F6:** tenant-scoped source-linked CSV/XLSX/PDF report artifacts with expiry and integrity checks;\n- **F7:** Telegram voice-note/STT/TTS provider boundary through the same identity and audit controls;\n- **F8:** shared local/cloud runtime, readiness and backup/restore with Windows as the first UAT target;\n- **F9:** permissioned customer create/update, procurement request create and balanced draft-voucher create with approval + idempotency.
 
 F3 and F4 have exact-SHA green CI builder handoffs. Their sanctioned live external E2E tests remain gated by deployment inputs O-02 and O-03. F5 is being built to the model-provider boundary; O-04 controls the live LLM selection and data/privacy policy.
 
-Telegram and reports are implemented to credential/pilot-policy boundaries, but no live Telegram sandbox certification, approved production report template, voice, permissioned writes or production deployment certification is claimed yet.
+Telegram, Drive, reports, voice, deployment and F9 write foundations are implemented to their documented credential/customer-policy boundaries. No live customer write integration or production certification is claimed until the remaining OPEN_ITEMS gates are satisfied.
 
 ## Safety architecture
 
@@ -34,7 +34,7 @@ user
 
 Source content is untrusted data, not instructions. In the current F5 foundation it is never recursively fed back to the planner, preventing a spreadsheet/API cell from causing a second tool invocation.
 
-Financial writes remain a separate F9 release behind source-domain validation, source-system authorization, accounting invariants, idempotency and explicit approval.
+F9 permits only four owner-approved action classes. Draft vouchers must balance and remain DRAFT; posting, deletion and editing posted vouchers remain prohibited.
 
 ## Local verification
 
