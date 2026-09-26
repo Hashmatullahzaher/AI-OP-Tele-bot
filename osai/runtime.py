@@ -1,7 +1,8 @@
-"""Minimal operational runtime/check surface for F8.
+"""Minimal operational runtime/check surface for F8 and Windows UAT packaging.
 
-Only health/readiness endpoints are exposed here. Business/chat/API routes remain
-separate capability/channel work and must not be implied by this server.
+Only health/readiness and a local operator status page are exposed here.
+Business/chat/API routes remain separate capability/channel work and must not be
+implied by this server.
 """
 
 from __future__ import annotations
@@ -18,6 +19,43 @@ from .deployment import ReadinessReport, evaluate_readiness
 from .storage import TenantSecurityStore
 
 CORE_VERSION = "0.1.0"
+
+_OPERATOR_DASHBOARD = """<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OS AI Core</title>
+<style>
+:root{font-family:Segoe UI,Arial,sans-serif;color:#1f2937;background:#f4f7fb}
+body{margin:0;padding:40px}.shell{max-width:760px;margin:auto}.card{background:#fff;border-radius:16px;padding:24px;
+box-shadow:0 8px 28px rgba(15,23,42,.08);margin-bottom:16px}.row{display:flex;justify-content:space-between;
+gap:16px;align-items:center}.pill{padding:6px 10px;border-radius:999px;background:#eef2ff;font-weight:600}
+small{color:#64748b}code{background:#f1f5f9;padding:2px 6px;border-radius:6px}.ok{background:#dcfce7}.warn{background:#fef3c7}
+</style>
+</head>
+<body>
+<div class="shell">
+<div class="card"><div class="row"><div><h1>OS AI Core</h1><small>Local Operator Dashboard</small></div>
+<span id="health" class="pill">Checking...</span></div></div>
+<div class="card"><h2>Runtime</h2><p>This page is served by the installed Core, not the demo application.</p>
+<p>Local endpoint: <code>http://127.0.0.1:8765</code></p><p id="ready">Readiness: checking...</p></div>
+<div class="card"><h2>Security boundary</h2><p>The Windows local profile binds to loopback by default. No public firewall
+rule is created by the installer. Telegram, hosted AI, Drive, and customer APIs stay unavailable until separately configured.</p></div>
+</div>
+<script>
+async function refresh(){
+ try{const h=await fetch('/healthz',{cache:'no-store'});const j=await h.json();
+ const e=document.getElementById('health');e.textContent=j.status==='alive'?'Running':'Unavailable';
+ e.className='pill '+(j.status==='alive'?'ok':'warn');}catch(_){document.getElementById('health').textContent='Unavailable';}
+ try{const r=await fetch('/readyz',{cache:'no-store'});const j=await r.json();
+ document.getElementById('ready').textContent='Readiness: '+(j.ready?'ready':'degraded');}catch(_){
+ document.getElementById('ready').textContent='Readiness: unavailable';}}
+refresh();setInterval(refresh,5000);
+</script>
+</body>
+</html>
+"""
 
 
 def _csv_env(name: str) -> tuple[str, ...]:
@@ -54,8 +92,10 @@ def config_from_env(env: Mapping[str, str] | None = None) -> RuntimeConfig:
 
 def readiness_from_env(env: Mapping[str, str] | None = None) -> ReadinessReport:
     source = os.environ if env is None else env
+
     def split(name: str) -> tuple[str, ...]:
         return tuple(item.strip() for item in source.get(name, "").split(",") if item.strip())
+
     return evaluate_readiness(
         network_mode=source.get("OSAI_NETWORK_MODE", "online"),
         required_external=split("OSAI_REQUIRED_EXTERNAL"),
@@ -75,6 +115,9 @@ class _HealthHandler(BaseHTTPRequestHandler):
     server_version = "OSAIHealth/0.1"
 
     def do_GET(self) -> None:  # noqa: N802
+        if self.path in {"/", "/index.html"}:
+            self._html(200, _OPERATOR_DASHBOARD)
+            return
         if self.path == "/healthz":
             self._json(200, {"status": "alive", "version": CORE_VERSION})
             return
@@ -82,19 +125,48 @@ class _HealthHandler(BaseHTTPRequestHandler):
             report = readiness_from_env()
             self._json(200 if report.ready else 503, report.as_dict())
             return
+        if self.path == "/favicon.ico":
+            self.send_response(204)
+            self._security_headers()
+            self.end_headers()
+            return
         self._json(404, {"status": "not_found"})
 
     def log_message(self, format: str, *args: object) -> None:
         return
 
+    def _security_headers(self) -> None:
+        self.send_header("Cache-Control", "no-store")
+        self.send_header("X-Content-Type-Options", "nosniff")
+        self.send_header("Referrer-Policy", "no-referrer")
+        self.send_header("X-Frame-Options", "DENY")
+        self.send_header(
+            "Content-Security-Policy",
+            "default-src 'self'; style-src 'unsafe-inline'; script-src 'unsafe-inline'; "
+            "connect-src 'self'; frame-ancestors 'none'; base-uri 'none'",
+        )
+
     def _json(self, status: int, payload: Mapping[str, object]) -> None:
         body = json.dumps(payload, separators=(",", ":")).encode("utf-8")
         self.send_response(status)
         self.send_header("Content-Type", "application/json")
-        self.send_header("Cache-Control", "no-store")
+        self._security_headers()
         self.send_header("Content-Length", str(len(body)))
         self.end_headers()
         self.wfile.write(body)
+
+    def _html(self, status: int, payload: str) -> None:
+        body = payload.encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self._security_headers()
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+
+def build_server(config: RuntimeConfig) -> ThreadingHTTPServer:
+    return ThreadingHTTPServer((config.bind_host, config.port), _HealthHandler)
 
 
 def main() -> int:
@@ -118,7 +190,7 @@ def main() -> int:
             )
         )
         return 0 if report.ready else 3
-    server = ThreadingHTTPServer((config.bind_host, config.port), _HealthHandler)
+    server = build_server(config)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
