@@ -133,7 +133,7 @@ class _HealthHandler(BaseHTTPRequestHandler):
             self._html(200, _OPERATOR_DASHBOARD)
             return
         if self.path == "/healthz":
-            self._json(200, {"status": "alive", "version": CORE_VERSION})
+            self._json(200, {"status": "alive", "product": "os-ai-core", "version": CORE_VERSION})
             return
         if self.path == "/readyz":
             report = readiness_from_env()
