@@ -25,7 +25,7 @@ import urllib.request
 import zipfile
 from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Any, NoReturn, Protocol
+from typing import Any, NoReturn, Protocol, cast
 from xml.etree import ElementTree as ET
 
 from ..contracts import CapabilityManifest, ExecutionContext, JSONValue, SourceProvenance, ToolResult
@@ -89,7 +89,7 @@ class UrllibGoogleTransport:
     _ALLOWED_HOSTS = frozenset({_DRIVE_API_HOST, _SHEETS_API_HOST})
 
     class _NoRedirect(urllib.request.HTTPRedirectHandler):
-        def redirect_request(self, req, fp, code, msg, headers, newurl):  # type: ignore[no-untyped-def]
+        def redirect_request(self, req, fp, code, msg, headers, newurl):
             raise GoogleHTTPError(code, "redirect refused")
 
     def __init__(self) -> None:
@@ -601,7 +601,7 @@ def _column_index(cell_ref: str) -> int:
     return value - 1
 
 
-def _xlsx_cell_value(cell: ET.Element, shared_strings: list[str], ns: Mapping[str, str]) -> object:
+def _xlsx_cell_value(cell: ET.Element, shared_strings: list[str], ns: dict[str, str]) -> object:
     cell_type = cell.attrib.get("t")
     value_node = cell.find("main:v", ns)
     if cell_type == "inlineStr":
