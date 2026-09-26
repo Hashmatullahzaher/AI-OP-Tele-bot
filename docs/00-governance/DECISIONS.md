@@ -17,4 +17,6 @@
 
 | DEC-011 | After direct Excel UAT, exercise Telegram ingress -> provider-neutral write planning -> separate same-actor approval -> F9 -> Excel before using live credentials. | CONFIRMED 2026-09-26 | CI uses a deterministic synthetic planner; live Telegram and live LLM remain separately gated. |
 
+| DEC-012 | Windows UAT Setup Wizard stores local configuration in ProgramData and protects Telegram/OpenAI credentials with Windows DPAPI; Excel can activate immediately while live Telegram/LLM connectors remain gated. | CONFIRMED 2026-09-26 | Installer opens `/setup`; status APIs expose configured booleans only, never secret values. |
+
 Decision changes require author/date/rationale and affected acceptance criteria to be recorded here and in `OPEN_ITEMS.md` when applicable.
