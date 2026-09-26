@@ -74,12 +74,16 @@ class SetupApplyRequest:
                 raise SetupValidationError(f"{name} must be a string")
             return value
 
+        clear_telegram = raw.get("clear_telegram_token", False)
+        clear_openai = raw.get("clear_openai_api_key", False)
+        if not isinstance(clear_telegram, bool) or not isinstance(clear_openai, bool):
+            raise SetupValidationError("clear flags must be boolean")
         return cls(
             settings=dict(settings),
             telegram_bot_token=optional_secret("telegram_bot_token"),
             openai_api_key=optional_secret("openai_api_key"),
-            clear_telegram_token=bool(raw.get("clear_telegram_token", False)),
-            clear_openai_api_key=bool(raw.get("clear_openai_api_key", False)),
+            clear_telegram_token=clear_telegram,
+            clear_openai_api_key=clear_openai,
         )
 
 
