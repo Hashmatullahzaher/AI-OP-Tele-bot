@@ -3,6 +3,9 @@
 from __future__ import annotations
 
 import hmac
+import os
+import secrets
+import tempfile
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
@@ -29,6 +32,44 @@ def runtime_data_root(config: RuntimeConfig) -> Path:
     if parent.name.casefold() == "data":
         return parent.parent
     return parent
+
+
+def setup_access_token_for_runtime(config: RuntimeConfig) -> str:
+    root = runtime_data_root(config)
+    path = root / "config" / "setup-access.token"
+    if path.exists():
+        try:
+            value = path.read_text(encoding="utf-8").strip()
+        except OSError as exc:
+            raise SetupError("setup access token is unavailable") from exc
+        if len(value) < 40 or len(value) > 256:
+            raise SetupError("setup access token is invalid")
+        return value
+
+    path.parent.mkdir(parents=True, exist_ok=True)
+    value = secrets.token_urlsafe(48)
+    fd, tmp_name = tempfile.mkstemp(
+        prefix=".setup-access-",
+        suffix=".token",
+        dir=str(path.parent),
+    )
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as handle:
+            handle.write(value)
+            handle.flush()
+            os.fsync(handle.fileno())
+        os.replace(tmp_name, path)
+    except OSError as exc:
+        try:
+            os.close(fd)
+        except OSError:
+            pass
+        try:
+            os.unlink(tmp_name)
+        except OSError:
+            pass
+        raise SetupError("setup access token could not be created") from exc
+    return value
 
 
 def setup_manager_for_runtime(config: RuntimeConfig) -> SetupManager:
@@ -92,9 +133,18 @@ class SetupApplyRequest:
 class SetupWebController:
     """Stateful controller; the CSRF token lives only in service memory."""
 
-    def __init__(self, *, config: RuntimeConfig, manager: SetupManager) -> None:
+    def __init__(
+        self,
+        *,
+        config: RuntimeConfig,
+        manager: SetupManager,
+        access_token: str,
+    ) -> None:
+        if len(access_token) < 40:
+            raise ValueError("setup access token is too short")
         self.config = config
         self.manager = manager
+        self.access_token = access_token
         self.csrf_token = manager.generate_csrf_token()
 
     @property
@@ -129,6 +179,9 @@ class SetupWebController:
             openai_api_key=None,
         )
         return self._status_payload(status)
+
+    def verify_access(self, presented: str | None) -> bool:
+        return presented is not None and hmac.compare_digest(self.access_token, presented)
 
     def verify_csrf(self, presented: str | None) -> bool:
         return presented is not None and hmac.compare_digest(self.csrf_token, presented)
