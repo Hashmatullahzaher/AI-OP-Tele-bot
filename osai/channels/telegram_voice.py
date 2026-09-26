@@ -496,7 +496,7 @@ def _safe_file_path(path: str) -> bool:
         not path
         or len(path) > 512
         or path.startswith("/")
-        or "\" in path
+        or "\\" in path
         or "//" in path
     ):
         return False
