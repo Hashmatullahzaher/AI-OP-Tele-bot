@@ -72,3 +72,7 @@ jobs:
           $env:OSAI_SECRET_BACKEND = "test"
           $env:OSAI_NETWORK_MODE = "offline"
           python -m osai.runtime check
+      - name: Run Excel sandbox UAT on Windows
+        shell: pwsh
+        run: |
+          python -m osai.excel_uat smoke --path "$env:RUNNER_TEMP\OS-AI-Core-Excel-UAT.xlsx" --db "$env:RUNNER_TEMP\OS-AI-Core-Excel-UAT.sqlite3"
