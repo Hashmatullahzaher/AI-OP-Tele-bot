@@ -179,7 +179,7 @@ def _run_service_dispatcher() -> int:
         return NO_ERROR
 
     @service_main_type
-    def service_main(argc: int, argv: ctypes.POINTER(wintypes.LPWSTR)) -> None:
+    def service_main(argc: int, argv: object) -> None:
         nonlocal status_handle
         del argc, argv
         status_handle = advapi32.RegisterServiceCtrlHandlerExW(SERVICE_NAME, control_handler, None)
@@ -225,7 +225,7 @@ def _run_service_dispatcher() -> int:
     ok = advapi32.StartServiceCtrlDispatcherW(table)
     if ok:
         return 0
-    error = ctypes.get_last_error()
+    error = ctypes.get_last_error()  # type: ignore[attr-defined]
     if error == ERROR_FAILED_SERVICE_CONTROLLER_CONNECT:
         print("This command must be launched by the Windows Service Control Manager.", file=sys.stderr)
     else:
