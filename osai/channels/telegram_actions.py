@@ -12,6 +12,7 @@ import json
 import re
 
 from ..actions import ActionError, ActionInProgress
+from ..agent import ProviderUnavailable
 from ..contracts import PolicyDenied
 from ..write_agent import PermissionedWriteAgent, WriteAgentError, WritePlanInvalid
 from .telegram import TelegramIngressResult
@@ -51,6 +52,8 @@ class TelegramActionBridge:
                 message=text,
                 context=result.context,
             )
+        except ProviderUnavailable:
+            return "The AI provider is temporarily unavailable."
         except WritePlanInvalid:
             return "I could not produce a safe write proposal from that request."
         except WriteAgentError:
