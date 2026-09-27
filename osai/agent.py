@@ -226,7 +226,7 @@ class SourceGroundedAgent:
                 tool_catalog=catalog,
                 correlation_id=context.correlation_id,
             )
-        except ProviderUnavailable:
+        except (ProviderUnavailable, AgentPlanInvalid):
             raise
         except Exception as exc:
             raise ProviderUnavailable() from exc

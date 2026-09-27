@@ -32,4 +32,6 @@
 | DEC-021 | Pashto voice is best effort with measured accuracy; Dari and English voice are guaranteed; Pashto text is fully supported. | CONFIRMED 2026-09-27 | Resolves D-3. |
 | DEC-022 | V1 has one role, CEO, with access to all shared folders; role checks stay in code for later roles. | CONFIRMED 2026-09-27 | Resolves D-4. Speech-to-text is self-hosted Whisper (D-5). |
 
+| DEC-023 | The AI connection must not be tied to one vendor: any OpenAI-compatible API (OpenRouter, OpenAI, Groq, Gemini, DeepSeek, Mistral, Together, Azure, self-hosted), the native Anthropic API, and local models are supported, with API-key, custom-header, no-auth or sign-in-token (command) authentication. OpenRouter free models remain the v1 default. | CONFIRMED 2026-09-27 | Implemented in `osai/llm/`; configured only through server environment variables. |
+
 Decision changes require author/date/rationale and affected acceptance criteria to be recorded here and in `OPEN_ITEMS.md` when applicable.

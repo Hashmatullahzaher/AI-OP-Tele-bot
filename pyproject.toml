@@ -9,6 +9,10 @@ description = "Reusable typed AI operating layer for authorized company data sou
 requires-python = ">=3.11"
 dependencies = []
 
+[project.optional-dependencies]
+bot = ["google-auth>=2.30,<3", "requests>=2.31,<3"]
+anthropic = ["anthropic>=1,<2"]
+
 [tool.ruff]
 target-version = "py311"
 line-length = 120
@@ -24,6 +28,10 @@ no_implicit_optional = true
 warn_redundant_casts = true
 warn_unused_ignores = true
 show_error_codes = true
+
+[[tool.mypy.overrides]]
+module = ["google.*", "anthropic", "anthropic.*"]
+ignore_missing_imports = true
 
 
 [tool.setuptools.packages.find]

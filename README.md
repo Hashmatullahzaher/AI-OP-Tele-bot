@@ -66,7 +66,7 @@ For the Windows Excel sandbox UAT, see `docs/05-operations/EXCEL_UAT.md`. For th
 
 ## Current plan
 
-The project was restructured on 2026-09-27. Start with `docs/00-governance/V1_PLAN.md`: v1 is a trilingual Telegram Q&A bot over Google Sheets, running on a cloud server.
+The project was restructured on 2026-09-27. Start with `docs/00-governance/V1_PLAN.md`: v1 is a trilingual Telegram Q&A bot over Google Sheets, running on a cloud server. To deploy the bot, follow `docs/05-operations/V1_BOT_SETUP.md`; it runs with `python -m osai.bot` and can use any AI provider (`osai/llm/`).
 
 ## App Maker source of truth
 
