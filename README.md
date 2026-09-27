@@ -64,6 +64,10 @@ Do not expose the demo publicly or use real company data in it.
 
 For the Windows Excel sandbox UAT, see `docs/05-operations/EXCEL_UAT.md`. For the Telegram planning/approval layer, see `docs/05-operations/TELEGRAM_AI_EXCEL_UAT.md`. For the installable configuration layer, see `docs/05-operations/WINDOWS_SETUP_WIZARD_UAT.md`. For the no-install local mode, see `docs/05-operations/WINDOWS_PORTABLE_LOCAL_UAT.md`.
 
+## Current plan
+
+The project was restructured on 2026-09-27. Start with `docs/00-governance/V1_PLAN.md`: v1 is a trilingual Telegram Q&A bot over Google Sheets, running on a cloud server.
+
 ## App Maker source of truth
 
 Read:

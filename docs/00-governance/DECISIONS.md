@@ -21,4 +21,11 @@
 
 | DEC-013 | Provide a one-file Windows Portable Local mode that requires no installer, Windows Service, or administrator elevation. | CONFIRMED 2026-09-26 | Portable mode runs per-user on 127.0.0.1 using a dynamically selected free port; 8765/8766 are reserved, data stays under LocalAppData, and Dashboard/Setup/Stop are exposed from a small control window. |
 
+| DEC-014 | Claude is appointed project lead (senior director); full authority to restructure the repository and merge to `main`, with owner review at milestones. | CONFIRMED 2026-09-27 | See `V1_PLAN.md`. |
+| DEC-015 | V1 first user is the owner's own company; the v1 job is answering data questions (read-only). V1 is done when it is a client-ready demo. | CONFIRMED 2026-09-27 | Write actions (F9), Excel sandbox and Windows packaging are parked for v1, not deleted. |
+| DEC-016 | V1 languages: Dari, Pashto and English, text and voice from day one. | CONFIRMED 2026-09-27 | Pashto voice accuracy risk is tracked as decision D-3 in `V1_PLAN.md`. |
+| DEC-017 | V1 runs on a small cloud VPS; first data source is Google Sheets/Drive; ERP REST read-only follows in v1.1. | CONFIRMED 2026-09-27 | Supersedes DEC-008's Windows-first target for v1; Telegram uses long polling. |
+| DEC-018 | AI model is customer-selectable behind a provider interface; v1 ships one cloud adapter, a local model is v2. | CONFIRMED 2026-09-27 | Model choice under the budget is decision D-1 in `V1_PLAN.md`. |
+| DEC-019 | V1 has staff roles that restrict which data each person can see; target 2–3 weeks; running budget under $50/month; owner performs account setup from lead-provided guides. | CONFIRMED 2026-09-27 | Secrets live only in server environment files. |
+
 Decision changes require author/date/rationale and affected acceptance criteria to be recorded here and in `OPEN_ITEMS.md` when applicable.
