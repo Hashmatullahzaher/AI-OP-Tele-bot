@@ -14,7 +14,7 @@ A Telegram bot that staff message in **Dari, Pashto or English, by text or voice
 
 ## 2. Scope
 
-| In v1 | Parked (kept in Git history, tag `archive/pre-v1`) |
+| In v1 | Parked (kept in Git history and on branch `app-maker/windows-portable-local`) |
 |---|---|
 | Telegram private chat: text and voice notes | Write actions (F9: customers, procurement, draft vouchers) |
 | Google Sheets / Drive, read-only | Excel sandbox UAT and Telegram → Excel write flow |
@@ -54,7 +54,7 @@ Telegram (long polling, no public HTTPS needed)
 
 | Week | Goal | Exit check |
 |---|---|---|
-| **0** (1–2 days) | **Consolidate.** Merge the 16-PR stack into `main`, fix the F3/F4 split, close obsolete PRs, tag `archive/pre-v1`, move parked modules out of the runtime path. Owner creates the accounts (§7). | `main` is green in CI and holds everything; one open branch. |
+| **0** (1–2 days) | **Consolidate.** Merge the 16-PR stack into `main`, fix the F3/F4 split, close obsolete PRs, keep `app-maker/windows-portable-local` as the archive, move parked modules out of the runtime path. Owner creates the accounts (§7). | `main` is green in CI and holds everything; one open branch. |
 | **1** | **First real answer.** Real AI adapter, real bot on the VPS, real Sheets read. Build the evaluation set: 40–60 real questions with correct answers, in all three languages. | A staff member asks a real question on Telegram and gets the right number with its source. |
 | **2** | **Correct and safe.** Handle messy real sheets (merged headers, Dari/Pashto column names, dates in the Solar Hijri calendar), roles to folders, user pairing, right-to-left formatting, voice notes. | Eval score ≥ 85% in Dari and English. A role cannot read outside its scope. Voice works in Dari. |
 | **3** | **Client-ready.** Demo company, cost cap and usage report, deployment script, backup/restore drill, runbook, demo script. Team uses it daily. | Eval ≥ 90% (Dari/English); Pashto measured and reported. A full dry-run demo passes. Monthly cost projection under $50. |
