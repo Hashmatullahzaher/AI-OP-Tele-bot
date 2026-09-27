@@ -542,7 +542,12 @@ def _resolve_sheet_path(workbook: ET.Element, rels: ET.Element, sheet_name: str)
         target = rel_map.get(rel_id or "")
         if not target:
             raise DriveSchemaAmbiguous("configured worksheet relationship is missing")
-        normalized = posixpath.normpath(posixpath.join("xl", target))
+        # OPC allows package-absolute targets ("/xl/worksheets/sheet1.xml", as
+        # written by openpyxl and others) as well as ones relative to xl/.
+        if target.startswith("/"):
+            normalized = posixpath.normpath(target.lstrip("/"))
+        else:
+            normalized = posixpath.normpath(posixpath.join("xl", target))
         if normalized.startswith("../") or not normalized.startswith("xl/"):
             raise DriveSchemaAmbiguous("configured worksheet path is invalid")
         return normalized

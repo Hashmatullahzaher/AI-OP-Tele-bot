@@ -1,0 +1,4 @@
+google-auth>=2.30,<3
+requests>=2.31,<3
+# Only needed when OSAI_LLM_PRESET=anthropic (or OSAI_LLM_PROTOCOL=anthropic):
+anthropic>=1,<2

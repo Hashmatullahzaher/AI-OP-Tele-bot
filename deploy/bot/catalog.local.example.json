@@ -1,0 +1,36 @@
+{
+  "tenant_id": "demo-company",
+  "resources": [
+    {
+      "alias": "expenses-file",
+      "kind": "csv",
+      "path": "sample/expenses.csv",
+      "tables": [
+        {
+          "alias": "expenses",
+          "description": "SYNTHETIC demo data. Company expenses, one row per payment. Month uses YYYY-MM; Status is Paid or Pending.",
+          "columns": ["Date", "Month", "Account", "Project", "Amount", "Currency", "Status"]
+        }
+      ]
+    },
+    {
+      "alias": "sales-file",
+      "kind": "csv",
+      "path": "sample/sales.csv",
+      "tables": [
+        {
+          "alias": "sales",
+          "description": "SYNTHETIC demo data. Sales invoices, one row per sale. Month uses YYYY-MM; Total is the invoice amount.",
+          "columns": ["Date", "Month", "Customer", "Product", "Quantity", "Total", "Currency"]
+        }
+      ]
+    }
+  ],
+  "roles": {
+    "ceo": {"resources": ["*"]}
+  },
+  "users": [
+    {"telegram_user_id": 1, "actor_id": "ceo", "role": "ceo"}
+  ],
+  "web_user": "ceo"
+}

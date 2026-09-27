@@ -1,0 +1,26 @@
+{
+  "tenant_id": "company",
+  "resources": [
+    {
+      "alias": "finance",
+      "file_id": "REPLACE_WITH_SPREADSHEET_ID",
+      "kind": "google_sheet",
+      "parent_id": "REPLACE_WITH_PARENT_FOLDER_ID",
+      "tables": [
+        {
+          "alias": "expenses",
+          "sheet_name": "Expenses",
+          "range": "A1:H5000",
+          "description": "Company expenses, one row per payment. Month column uses YYYY-MM.",
+          "columns": ["Date", "Month", "Account", "Project", "Amount", "Currency", "Paid To", "Notes"]
+        }
+      ]
+    }
+  ],
+  "roles": {
+    "ceo": {"resources": ["*"]}
+  },
+  "users": [
+    {"telegram_user_id": 123456789, "actor_id": "ceo", "role": "ceo"}
+  ]
+}
