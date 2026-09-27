@@ -9,8 +9,8 @@ RUN useradd --create-home --uid 10001 osai \
     && chown -R osai:osai /var/lib/osai
 
 WORKDIR /app
-COPY requirements-bot.txt /app/requirements-bot.txt
-RUN pip install --no-cache-dir -r /app/requirements-bot.txt
+COPY requirements-bot.txt requirements-voice.txt /app/
+RUN pip install --no-cache-dir -r /app/requirements-bot.txt -r /app/requirements-voice.txt
 COPY osai /app/osai
 
 USER osai

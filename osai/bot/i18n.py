@@ -17,6 +17,9 @@ LANGS = ("fa", "ps", "en")
 
 MESSAGES: Mapping[str, Mapping[str, str]] = {
     "en": {
+        "heard": "🎤 I heard: «{text}»",
+        "voice_failed": "Sorry, I could not understand that voice note. Please try again or type your question.",
+        "voice_too_long": "Voice notes can be at most {seconds} seconds. Please send a shorter one.",
         "welcome": 'Hello! Ask me about the company\'s data, for example: "What were total expenses this month?"',
         "unauthorized": "You are not allowed to use this bot. Ask the administrator to add your Telegram ID: {user_id}",
         "busy": "The AI service is busy right now. Please try again in a moment.",
@@ -34,6 +37,9 @@ MESSAGES: Mapping[str, Mapping[str, str]] = {
         "source": "Source: {source} / {sheet} (updated {revision})",
     },
     "fa": {
+        "heard": "🎤 شنیدم: «{text}»",
+        "voice_failed": "متأسفانه پیام صوتی را نفهمیدم. لطفاً دوباره امتحان کنید یا سؤال خود را بنویسید.",
+        "voice_too_long": "پیام صوتی حداکثر {seconds} ثانیه باشد. لطفاً کوتاه‌تر بفرستید.",
         "welcome": "سلام! دربارهٔ داده‌های شرکت از من بپرسید، مثلاً: «مجموع مصارف این ماه چقدر است؟»",
         "unauthorized": "شما اجازهٔ استفاده از این ربات را ندارید. از مدیر بخواهید آی‌دی تلگرام شما را اضافه کند: {user_id}",
         "busy": "سرویس هوش مصنوعی فعلاً مصروف است. لطفاً کمی بعد دوباره امتحان کنید.",
@@ -51,6 +57,9 @@ MESSAGES: Mapping[str, Mapping[str, str]] = {
         "source": "منبع: {source} / {sheet} (به‌روزرسانی {revision})",
     },
     "ps": {
+        "heard": "🎤 ما واورېدل: «{text}»",
+        "voice_failed": "بښنه غواړم، غږیز پیغام مې ونه پوهېد. مهرباني وکړئ بیا هڅه وکړئ یا خپله پوښتنه ولیکئ.",
+        "voice_too_long": "غږیز پیغام باید تر {seconds} ثانیو لنډ وي. مهرباني وکړئ لنډ پیغام راولېږئ.",
         "welcome": "سلام! د شرکت د معلوماتو په اړه راڅخه وپوښتئ، د بېلګې په توګه: «د دې میاشتې ټول لګښتونه څومره دي؟»",
         "unauthorized": "تاسو د دې ربات د کارولو اجازه نه لرئ. له مدیر څخه وغواړئ چې ستاسو د ټیلیګرام آی‌ډي ور زیاته کړي: {user_id}",
         "busy": "د مصنوعي ځیرکتیا خدمت اوس بوخت دی. مهرباني وکړئ لږ وروسته بیا هڅه وکړئ.",

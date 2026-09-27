@@ -25,9 +25,11 @@ from ..connectors.google_drive import GoogleDriveConnector, drive_table_manifest
 from ..contracts import CapabilityRegistry, ToolExecutor
 from ..llm import LLMSettings, build_planner, settings_from_env
 from ..storage import TenantSecurityStore
+from ..voice import SpeechToTextProvider, VoiceService
 from .catalog import BotCatalog, load_catalog
 from .google_auth import ServiceAccountTokenProvider
 from .service import BotService, bootstrap_store
+from .stt import stt_from_env
 from .telegram_poll import TelegramPoller
 
 
@@ -38,6 +40,7 @@ class BotConfig:
     google_key_file: str
     data_dir: Path
     llm: LLMSettings
+    stt: SpeechToTextProvider | None
 
 
 def _default_data_dir(env: Mapping[str, str]) -> str:
@@ -53,12 +56,14 @@ def config_from_env(env: Mapping[str, str]) -> BotConfig:
     key_file = env.get("OSAI_GOOGLE_KEY_FILE", "/etc/osai/google-service-account.json")
     if not Path(key_file).is_file():
         raise ValueError("OSAI_GOOGLE_KEY_FILE does not point to a file")
+    data_dir = Path(env.get("OSAI_DATA_DIR") or _default_data_dir(env))
     return BotConfig(
         telegram_token=token,
         catalog=load_catalog(env.get("OSAI_CATALOG_PATH", "/etc/osai/catalog.json")),
         google_key_file=key_file,
-        data_dir=Path(env.get("OSAI_DATA_DIR") or _default_data_dir(env)),
+        data_dir=data_dir,
         llm=settings_from_env(env),
+        stt=stt_from_env(env, data_dir=str(data_dir)),
     )
 
 
@@ -80,7 +85,8 @@ def build_service(config: BotConfig) -> BotService:
         policy_check=store.authorize,
         audit_sink=store,
     )
-    return BotService(agent=agent, catalog=config.catalog)
+    voice = VoiceService(store=store, stt_provider=config.stt) if config.stt is not None else None
+    return BotService(agent=agent, catalog=config.catalog, voice=voice)
 
 
 def read_env_file(path: str) -> dict[str, str]:
@@ -129,7 +135,8 @@ def main(argv: list[str] | None = None) -> int:
     if command == "check":
         print(
             f"ok: tenant={config.catalog.tenant_id} tables={len(config.catalog.tables)} "
-            f"users={len(config.catalog.users)} llm={config.llm.provider_label}:{config.llm.model}"
+            f"users={len(config.catalog.users)} llm={config.llm.provider_label}:{config.llm.model} "
+            f"voice={'off' if config.stt is None else type(config.stt).__name__}"
         )
         return 0
     if command != "run":
@@ -139,6 +146,9 @@ def main(argv: list[str] | None = None) -> int:
     poller = TelegramPoller(
         token=config.telegram_token,
         on_text=lambda user_id, text: service.handle_text(telegram_user_id=user_id, text=text),
+        on_voice=lambda user_id, voice, download: service.handle_voice(
+            telegram_user_id=user_id, voice=voice, download=download
+        ),
     )
     poller.run_forever()
     return 0

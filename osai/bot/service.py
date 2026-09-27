@@ -4,11 +4,13 @@ from __future__ import annotations
 
 import logging
 import sqlite3
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
+from typing import Any
 
 from ..agent import AgentError, AgentPlanInvalid, ProviderUnavailable, SourceGroundedAgent
 from ..contracts import ExecutionContext
 from ..storage import TenantSecurityStore
+from ..voice import VoiceError, VoiceInputDenied, VoiceService
 from .catalog import BotCatalog
 from .i18n import detect_language, message, render_answer
 
@@ -41,10 +43,67 @@ def bootstrap_store(store: TenantSecurityStore, catalog: BotCatalog) -> None:
             ignore_duplicate(store.grant, catalog.tenant_id, user.actor_id, READ_CAPABILITY, scope)
 
 
+Downloader = Callable[[str], bytes]
+
+MAX_VOICE_SECONDS = 120
+_WHISPER_TO_REPLY_LANG = {"fa": "fa", "ps": "ps"}
+
+
 class BotService:
-    def __init__(self, *, agent: SourceGroundedAgent, catalog: BotCatalog) -> None:
+    def __init__(
+        self,
+        *,
+        agent: SourceGroundedAgent,
+        catalog: BotCatalog,
+        voice: VoiceService | None = None,
+    ) -> None:
         self.agent = agent
         self.catalog = catalog
+        self.voice = voice
+
+    def handle_voice(self, *, telegram_user_id: int, voice: Mapping[str, Any], download: Downloader) -> str:
+        """Authorize first, then download, transcribe, answer and echo the transcript."""
+
+        user = self.catalog.user(telegram_user_id)
+        if user is None:
+            return (
+                message("fa", "unauthorized", user_id=telegram_user_id)
+                + "\n"
+                + message("en", "unauthorized", user_id=telegram_user_id)
+            )
+        if self.voice is None:
+            return message("fa", "voice_unsupported") + "\n" + message("en", "voice_unsupported")
+        file_id = voice.get("file_id")
+        duration = voice.get("duration")
+        if not isinstance(file_id, str) or isinstance(duration, bool) or not isinstance(duration, int):
+            return message("fa", "voice_failed") + "\n" + message("en", "voice_failed")
+        if duration > MAX_VOICE_SECONDS:
+            return (
+                message("fa", "voice_too_long", seconds=MAX_VOICE_SECONDS)
+                + "\n"
+                + message("en", "voice_too_long", seconds=MAX_VOICE_SECONDS)
+            )
+        context = ExecutionContext.issue(tenant_id=self.catalog.tenant_id, actor_id=user.actor_id)
+        try:
+            audio = download(file_id)
+            result = self.voice.transcribe(
+                context=context,
+                audio=audio,
+                mime_type=str(voice.get("mime_type") or "audio/ogg"),
+                duration_seconds=max(duration, 1),
+                language_hint=None,
+            )
+        except VoiceInputDenied:
+            return message("fa", "voice_failed") + "\n" + message("en", "voice_failed")
+        except VoiceError as exc:
+            log.warning("voice unavailable correlation=%s reason=%s", context.correlation_id, exc)
+            return message("fa", "busy") + "\n" + message("en", "busy")
+        except Exception:
+            log.exception("voice download/transcription failed correlation=%s", context.correlation_id)
+            return message("fa", "voice_failed") + "\n" + message("en", "voice_failed")
+        lang = _WHISPER_TO_REPLY_LANG.get(result.language) or detect_language(result.text)
+        answer = self.handle_text(telegram_user_id=telegram_user_id, text=result.text)
+        return message(lang, "heard", text=result.text) + "\n\n" + answer
 
     def handle_text(self, *, telegram_user_id: int, text: str) -> str:
         lang = detect_language(text)

@@ -81,6 +81,15 @@ docker compose -f deploy/bot/compose.yml up -d --build
 docker compose -f deploy/bot/compose.yml logs -f              # Ctrl+C to stop watching
 ```
 
+## Voice notes
+
+Voice notes work out of the box with `OSAI_STT=local`, which runs Whisper on the server, for free, with audio kept on the server.
+
+- **First voice note:** the server downloads the Whisper model once (about 500 MB for `small`), so the first voice note takes a few minutes. After that, a 10-second voice note takes roughly 5–15 seconds on a 4 GB server.
+- **What users see:** the bot first shows what it heard ("🎤 I heard: ..."), so users can spot mistakes, then answers.
+- **Limit:** voice notes can be at most 120 seconds.
+- **Pashto:** Pashto is weaker (see decision D-3). For better accuracy, set `OSAI_STT=groq` with a Groq API key; it runs `whisper-large-v3`, but the audio is then sent to Groq.
+
 ## Step 6 — Add yourself as CEO
 
 1. In Telegram, open your bot and send `/start`.
@@ -107,7 +116,9 @@ The bot only answers while your computer is on and connected. That's fine for te
    py -m venv .venv
    .\.venv\Scripts\Activate.ps1
    pip install -r requirements-bot.txt
+   pip install -r requirements-voice.txt   # optional: voice notes with local Whisper
    ```
+   If you skip the voice line, put `OSAI_STT=off` in `bot.env` (or use `OSAI_STT=groq`).
    If PowerShell refuses to run `Activate.ps1`, first run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
 3. Make a private settings folder and copy the examples into it:
    ```powershell

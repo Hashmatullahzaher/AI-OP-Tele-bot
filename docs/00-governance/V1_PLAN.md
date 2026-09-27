@@ -68,7 +68,7 @@ Telegram (long polling, no public HTTPS needed)
 - **D-2 Any AI provider (DEC-023):** the connection is vendor-neutral. Any OpenAI-compatible API, the native Anthropic API or a local model can be used, authenticated by API key, custom header, no auth, or a sign-in token fetched by a command. Switching provider is a configuration change, not a code change.
 - **D-3 Pashto voice: accepted.** Dari and English voice are guaranteed. Pashto voice is best effort, with its accuracy measured and reported. Pashto text is fully in scope.
 - **D-4 Roles: one role for now, CEO**, with access to every shared folder. The role and policy checks stay in the code, so more roles can be added later without redesign.
-- **D-5 Speech-to-text (lead's choice, following the free-first preference):** run the open-source Whisper model on our own server. It is free, and voice audio never leaves the server. This needs a VPS with about 4 GB RAM. A paid speech API is the fallback if accuracy or speed is not good enough.
+- **D-5 Speech-to-text (implemented; also any OpenAI-compatible Whisper API such as Groq) (lead's choice, following the free-first preference):** run the open-source Whisper model on our own server. It is free, and voice audio never leaves the server. This needs a VPS with about 4 GB RAM. A paid speech API is the fallback if accuracy or speed is not good enough.
 
 ## 7. What the owner provides (the lead supplies step-by-step guides)
 

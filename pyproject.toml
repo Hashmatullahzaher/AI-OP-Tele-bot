@@ -30,7 +30,7 @@ warn_unused_ignores = true
 show_error_codes = true
 
 [[tool.mypy.overrides]]
-module = ["google.*", "anthropic", "anthropic.*"]
+module = ["google.*", "anthropic", "anthropic.*", "faster_whisper", "faster_whisper.*"]
 ignore_missing_imports = true
 
 
