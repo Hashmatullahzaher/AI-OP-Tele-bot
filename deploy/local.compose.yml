@@ -1,0 +1,22 @@
+services:
+  osai-core:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    network_mode: host
+    environment:
+      OSAI_PROFILE: local
+      OSAI_BIND_HOST: 127.0.0.1
+      OSAI_PORT: ${OSAI_PORT:-8765}
+      OSAI_DATABASE_PATH: /var/lib/osai/osai.sqlite3
+      OSAI_SECRET_BACKEND: ${OSAI_SECRET_BACKEND:-managed}
+      OSAI_NETWORK_MODE: ${OSAI_NETWORK_MODE:-online}
+      OSAI_REQUIRED_EXTERNAL: ${OSAI_REQUIRED_EXTERNAL:-}
+      OSAI_CONFIGURED_EXTERNAL: ${OSAI_CONFIGURED_EXTERNAL:-}
+    volumes:
+      - osai-data:/var/lib/osai
+    command: ["serve"]
+    restart: unless-stopped
+
+volumes:
+  osai-data:

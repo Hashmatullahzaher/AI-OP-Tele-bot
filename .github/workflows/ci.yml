@@ -1,0 +1,98 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -r requirements-dev.txt
+      - run: ruff check osai tests
+      - run: mypy osai
+      - run: python -m compileall -q app osai
+      - run: python -m unittest discover -s tests -v
+
+  container-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t os-ai-core:ci .
+      - name: Validate local profile in the same image
+        run: >-
+          docker run --rm --network none
+          -e OSAI_PROFILE=local
+          -e OSAI_BIND_HOST=127.0.0.1
+          -e OSAI_DATABASE_PATH=/tmp/local.sqlite3
+          -e OSAI_SECRET_BACKEND=test
+          os-ai-core:ci check
+      - name: Validate cloud profile in the same image
+        run: >-
+          docker run --rm --network none
+          -e OSAI_PROFILE=cloud
+          -e OSAI_BIND_HOST=0.0.0.0
+          -e OSAI_DATABASE_PATH=/tmp/cloud.sqlite3
+          -e OSAI_SECRET_BACKEND=test
+          -e OSAI_PUBLIC_BASE_URL=https://pilot.example.test
+          os-ai-core:ci check
+
+
+  windows-uat-smoke:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -e . -r requirements-dev.txt
+      - run: ruff check osai tests
+      - run: mypy osai
+      - run: python -m compileall -q app osai
+      - run: python -m unittest discover -s tests -v
+      - name: Validate Windows local profile
+        shell: pwsh
+        run: |
+          $env:OSAI_PROFILE = "local"
+          $env:OSAI_BIND_HOST = "127.0.0.1"
+          $env:OSAI_DATABASE_PATH = "$env:RUNNER_TEMP\osai-uat.sqlite3"
+          $env:OSAI_SECRET_BACKEND = "test"
+          $env:OSAI_NETWORK_MODE = "offline"
+          python -m osai.runtime check
+      - name: Run Excel sandbox UAT on Windows
+        shell: pwsh
+        run: |
+          python -m osai.excel_uat smoke --path "$env:RUNNER_TEMP\OS-AI-Core-Excel-UAT.xlsx" --db "$env:RUNNER_TEMP\OS-AI-Core-Excel-UAT.sqlite3"
+      - name: Upload Excel UAT workbook
+        uses: actions/upload-artifact@v4
+        with:
+          name: os-ai-core-excel-uat
+          path: ${{ runner.temp }}/OS-AI-Core-Excel-UAT.xlsx
+          if-no-files-found: error
+          retention-days: 7
+      - name: Run Telegram planner approval to Excel UAT
+        shell: pwsh
+        run: |
+          python -m osai.telegram_excel_uat --path "$env:RUNNER_TEMP\Telegram-AI-Excel-UAT.xlsx" --db "$env:RUNNER_TEMP\Telegram-AI-Excel-UAT.sqlite3" --transcript "$env:RUNNER_TEMP\Telegram-AI-Excel-UAT.json"
+      - name: Upload Telegram AI Excel UAT evidence
+        uses: actions/upload-artifact@v4
+        with:
+          name: os-ai-core-telegram-ai-excel-uat
+          path: |
+            ${{ runner.temp }}/Telegram-AI-Excel-UAT.xlsx
+            ${{ runner.temp }}/Telegram-AI-Excel-UAT.json
+          if-no-files-found: error
+          retention-days: 7

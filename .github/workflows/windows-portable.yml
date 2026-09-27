@@ -1,0 +1,134 @@
+name: Windows Portable Local
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-smoke:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e . -r requirements-dev.txt pyinstaller
+      - name: Run portable contract tests
+        run: python -m unittest tests.test_portable_local tests.test_setup_config tests.test_setup_wizard -v
+      - name: Build portable executable
+        run: pyinstaller --noconfirm --clean packaging/windows/osai-core-portable.spec
+      - name: Check bundled portable runtime
+        shell: pwsh
+        run: |
+          $env:LOCALAPPDATA = "$env:RUNNER_TEMP\portable-check-localappdata"
+          $check = Start-Process -FilePath ".\dist\OS-AI-Core-Portable.exe" -ArgumentList "check" -Wait -PassThru
+          if ($check.ExitCode -ne 0) { throw "Portable runtime check failed with code $($check.ExitCode)." }
+      - name: Smoke bundled portable localhost runtime
+        shell: pwsh
+        run: |
+          $env:LOCALAPPDATA = "$env:RUNNER_TEMP\portable-localappdata"
+          $statePath = Join-Path $env:LOCALAPPDATA "OS AI Core Portable\config\runtime-port.txt"
+          $proc = Start-Process -FilePath ".\dist\OS-AI-Core-Portable.exe" -ArgumentList "serve" -PassThru
+          try {
+            $ready = $false
+            $port = $null
+            for ($i = 0; $i -lt 40; $i++) {
+              if ($proc.HasExited) {
+                throw "Portable serve process exited before localhost became ready. Exit code: $($proc.ExitCode)"
+              }
+              if (Test-Path $statePath) {
+                $port = [int](Get-Content -Raw -LiteralPath $statePath)
+                if ($port -in @(8765, 8766)) {
+                  throw "Portable runtime selected a reserved port: $port"
+                }
+                try {
+                  $health = Invoke-RestMethod -Uri "http://127.0.0.1:$port/healthz" -TimeoutSec 2
+                  if ($health.status -eq "alive" -and $health.product -eq "os-ai-core") {
+                    $ready = $true
+                    break
+                  }
+                } catch {}
+              }
+              Start-Sleep -Milliseconds 500
+            }
+            if (-not $ready -or $null -eq $port) {
+              throw "Portable localhost runtime did not become ready on a dynamic port."
+            }
+
+            $dashboard = Invoke-WebRequest -Uri "http://127.0.0.1:$port/" -TimeoutSec 5
+            if ($dashboard.Content -notmatch "Local Operator Dashboard") {
+              throw "Portable runtime did not serve the operator dashboard."
+            }
+
+            $setup = Invoke-WebRequest -Uri "http://127.0.0.1:$port/setup" -TimeoutSec 5
+            if ($setup.Content -notmatch "OS AI Core Setup") {
+              throw "Portable runtime did not serve the setup wizard."
+            }
+
+            $db = Join-Path $env:LOCALAPPDATA "OS AI Core Portable\data\osai.sqlite3"
+            if (-not (Test-Path $db)) {
+              throw "Portable runtime did not create its per-user database."
+            }
+
+            Write-Output "WINDOWS_PORTABLE_DYNAMIC_PORT=$port"
+            Write-Output "WINDOWS_PORTABLE_LOCAL_SMOKE_PASS"
+          }
+          finally {
+            if (-not $proc.HasExited) {
+              Stop-Process -Id $proc.Id -Force
+            }
+          }
+      - name: Smoke actual double-click GUI launch path
+        shell: pwsh
+        run: |
+          $env:LOCALAPPDATA = "$env:RUNNER_TEMP\portable-gui-localappdata"
+          $statePath = Join-Path $env:LOCALAPPDATA "OS AI Core Portable\config\runtime-port.txt"
+          $proc = Start-Process -FilePath ".\dist\OS-AI-Core-Portable.exe" -PassThru
+          try {
+            $ready = $false
+            $port = $null
+            for ($i = 0; $i -lt 40; $i++) {
+              if ($proc.HasExited) {
+                throw "Portable GUI process exited before localhost became ready. Exit code: $($proc.ExitCode)"
+              }
+              if (Test-Path $statePath) {
+                $port = [int](Get-Content -Raw -LiteralPath $statePath)
+                if ($port -in @(8765, 8766)) {
+                  throw "Portable GUI selected a reserved port: $port"
+                }
+                try {
+                  $health = Invoke-RestMethod -Uri "http://127.0.0.1:$port/healthz" -TimeoutSec 2
+                  if ($health.status -eq "alive" -and $health.product -eq "os-ai-core") {
+                    $ready = $true
+                    break
+                  }
+                } catch {}
+              }
+              Start-Sleep -Milliseconds 500
+            }
+            if (-not $ready -or $null -eq $port) {
+              throw "Double-click portable GUI path did not start localhost on a dynamic port."
+            }
+            Write-Output "WINDOWS_PORTABLE_DOUBLE_CLICK_PORT=$port"
+            Write-Output "WINDOWS_PORTABLE_DOUBLE_CLICK_PASS"
+          }
+          finally {
+            if (-not $proc.HasExited) {
+              Stop-Process -Id $proc.Id -Force
+            }
+          }
+      - name: Upload portable executable
+        uses: actions/upload-artifact@v4
+        with:
+          name: os-ai-core-windows-portable-local-uat
+          path: dist/OS-AI-Core-Portable.exe
+          if-no-files-found: error
+          retention-days: 7
