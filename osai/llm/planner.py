@@ -29,6 +29,7 @@ class TableDescription:
     table_alias: str
     description: str
     columns: tuple[str, ...]
+    capability: str = "drive.table.read"
 
 
 PLAN_INSTRUCTIONS = """You are the query planner for a company data assistant.
@@ -42,7 +43,7 @@ return ONLY a JSON object, with no prose and no code fences, in this exact shape
  "filters": [{"column": "<column>", "equals": "<exact cell text>"}]}}
 
 Rules:
-- capability and arguments must match one tool in TOOLS and one table in TABLES.
+- Use the capability listed on the chosen table in TABLES, with its resource_alias and table_alias as arguments.
 - Use column names exactly as written in TABLES, even if the user writes them in
   another language; translate the user's words to the matching column.
 - "sum" totals a numeric column; set currency_column when the table has one.
@@ -61,6 +62,7 @@ def build_system_prompt(
         {
             "resource_alias": table.resource_alias,
             "table_alias": table.table_alias,
+            "capability": table.capability,
             "description": table.description,
             "columns": list(table.columns),
         }

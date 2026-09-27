@@ -8,15 +8,17 @@ from collections.abc import Callable, Mapping
 from typing import Any
 
 from ..agent import AgentError, AgentPlanInvalid, ProviderUnavailable, SourceGroundedAgent
+from ..connectors.local_files import LOCAL_CAPABILITY
 from ..contracts import ExecutionContext
 from ..storage import TenantSecurityStore
 from ..voice import VoiceError, VoiceInputDenied, VoiceService
-from .catalog import BotCatalog
+from .catalog import BotCatalog, BotUser
 from .i18n import detect_language, message, render_answer
 
 log = logging.getLogger("osai.bot")
 
 READ_CAPABILITY = "drive.table.read"
+READ_CAPABILITIES = (READ_CAPABILITY, LOCAL_CAPABILITY)
 
 _ERROR_KEYS = {
     "SOURCE_ACCESS_DENIED": "denied",
@@ -39,8 +41,11 @@ def bootstrap_store(store: TenantSecurityStore, catalog: BotCatalog) -> None:
     ignore_duplicate(store.add_tenant, catalog.tenant_id)
     for user in catalog.users:
         ignore_duplicate(store.add_actor, catalog.tenant_id, user.actor_id, role="TENANT_ADMIN")
-        for scope in catalog.scopes_for(user.role):
-            ignore_duplicate(store.grant, catalog.tenant_id, user.actor_id, READ_CAPABILITY, scope)
+        # Each connector re-checks its own scope prefix (drive:/local:), so both
+        # read capabilities are granted the role's full scope list.
+        for capability in READ_CAPABILITIES:
+            for scope in catalog.scopes_for(user.role):
+                ignore_duplicate(store.grant, catalog.tenant_id, user.actor_id, capability, scope)
 
 
 Downloader = Callable[[str], bytes]
@@ -106,10 +111,15 @@ class BotService:
         return message(lang, "heard", text=result.text) + "\n\n" + answer
 
     def handle_text(self, *, telegram_user_id: int, text: str) -> str:
-        lang = detect_language(text)
         user = self.catalog.user(telegram_user_id)
         if user is None:
-            return message(lang, "unauthorized", user_id=telegram_user_id)
+            return message(detect_language(text), "unauthorized", user_id=telegram_user_id)
+        return self.answer_as(user, text)
+
+    def answer_as(self, user: BotUser, text: str) -> str:
+        """Answer for an already-identified catalog user (Telegram or local web chat)."""
+
+        lang = detect_language(text)
         clean = text.strip()
         command = clean.split(maxsplit=1)[0].split("@")[0] if clean else ""
         if command in {"/start", "/help"}:

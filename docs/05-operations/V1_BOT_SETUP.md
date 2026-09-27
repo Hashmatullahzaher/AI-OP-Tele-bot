@@ -1,5 +1,49 @@
 # V1 bot setup guide (owner)
 
+## Quick start — try it in your browser on your own PC (10 minutes)
+
+This needs only an AI key: no Telegram, no Google and no server. It uses the **synthetic** sample data in `deploy/bot/sample/`.
+
+**Windows (PowerShell):**
+
+1. Install **Python 3.12** from python.org, ticking "Add python.exe to PATH". Install **Git** from git-scm.com.
+2. Get the code and install the libraries:
+   ```powershell
+   cd $HOME
+   git clone https://github.com/Hashmatullahzaher/AI-OP-Tele-bot.git
+   cd AI-OP-Tele-bot
+   py -m venv .venv
+   .\.venv\Scripts\Activate.ps1
+   pip install -r requirements-bot.txt
+   ```
+   If PowerShell refuses to run `Activate.ps1`, first run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
+3. Get a free AI key: sign up at **openrouter.ai**, go to **Keys** and create one. Then go to **Models**, filter for **free**, and copy the name of a free model (it ends in `:free`).
+4. Create your private settings file, outside the code folder:
+   ```powershell
+   mkdir $HOME\osai-secrets
+   copy deploy\bot\bot.local.env.example $HOME\osai-secrets\local.env
+   notepad $HOME\osai-secrets\local.env
+   ```
+   Fill in `OSAI_LLM_API_KEY=` and `OSAI_LLM_MODEL=`, then save.
+5. Start the chat:
+   ```powershell
+   python -m osai.bot web --env-file $HOME\osai-secrets\local.env
+   ```
+   Your browser opens **http://127.0.0.1:8770**. Ask, for example, "مجموع مصارف ماه سنبله چقدر است؟" or "Total sales to Ahmadi Traders?". Press Ctrl+C in PowerShell to stop.
+
+**Using your own Excel or CSV files:** copy `deploy/bot/catalog.local.example.json` to your `osai-secrets` folder and edit it:
+- `path`: the file's full path. Use `/` or doubled `\\` in paths.
+- `kind`: `csv`, or `xlsx_file` together with a `sheet_name`.
+- `columns`: the header names.
+
+Then point `OSAI_CATALOG_PATH` in `local.env` at your copy.
+
+The browser chat only listens on this computer, `127.0.0.1`. Other devices and websites cannot use it.
+
+---
+
+## Full setup — Telegram bot with Google Sheets
+
 Follow these steps once. Every secret goes **only** into files under `/etc/osai/` on the server. Never paste a secret into chat, email or GitHub.
 
 Total time: about 1 hour. Expected cost: the server only (about $10–20/month).
