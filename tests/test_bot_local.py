@@ -93,7 +93,10 @@ class LocalConfigTests(unittest.TestCase):
             self.assertIsNone(config.telegram_token)
             self.assertIsNone(config.google_key_file)
             service = build_service(config)
-            self.assertIn(LOCAL_CAPABILITY, service.agent.registry.names())
+            try:
+                self.assertIn(LOCAL_CAPABILITY, service.agent.registry.names())
+            finally:
+                service.agent.audit_sink.close()  # Windows cannot delete an open SQLite file
 
     def test_run_mode_still_requires_telegram(self):
         with tempfile.TemporaryDirectory() as tmp, self.assertRaises(ValueError):
