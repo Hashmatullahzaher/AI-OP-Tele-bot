@@ -237,5 +237,33 @@ class PollerTests(unittest.TestCase):
             TelegramPoller(token="not-a-token", on_text=lambda *a: "")
 
 
+class EnvFileTests(unittest.TestCase):
+    def test_env_file_parsing(self):
+        from osai.bot.__main__ import read_env_file
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "bot.env"
+            path.write_text('# comment\n\nOSAI_LLM_MODEL="m:free"\nOSAI_LLM_API_KEY=abc=def\n', encoding="utf-8")
+            self.assertEqual(read_env_file(str(path)), {"OSAI_LLM_MODEL": "m:free", "OSAI_LLM_API_KEY": "abc=def"})
+            path.write_text("not a setting\n", encoding="utf-8")
+            with self.assertRaises(ValueError):
+                read_env_file(str(path))
+
+    def test_check_with_env_file(self):
+        from osai.bot.__main__ import main
+
+        with tempfile.TemporaryDirectory() as tmp:
+            key = Path(tmp) / "key.json"
+            key.write_text("{}", encoding="utf-8")
+            env = Path(tmp) / "bot.env"
+            catalog = Path(__file__).resolve().parents[1] / "deploy" / "bot" / "catalog.example.json"
+            env.write_text(
+                f"OSAI_TELEGRAM_BOT_TOKEN={TOKEN}\nOSAI_LLM_API_KEY=k\nOSAI_LLM_MODEL=m:free\n"
+                f"OSAI_CATALOG_PATH={catalog}\nOSAI_GOOGLE_KEY_FILE={key}\n",
+                encoding="utf-8",
+            )
+            self.assertEqual(main(["check", "--env-file", str(env)]), 0)
+
+
 if __name__ == "__main__":
     unittest.main()

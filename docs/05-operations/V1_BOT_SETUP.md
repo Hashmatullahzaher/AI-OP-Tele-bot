@@ -92,6 +92,47 @@ docker compose -f deploy/bot/compose.yml logs -f              # Ctrl+C to stop w
    ```
 5. Send `/start` again, then ask a question in Dari, Pashto or English.
 
+## Alternative — run on your own computer (for testing)
+
+The bot only answers while your computer is on and connected. That's fine for testing; use the server for daily use. You still need Steps 2–4 (Telegram token, AI key, Google key file).
+
+**Windows (PowerShell):**
+
+1. Install **Python 3.12** from python.org, ticking "Add python.exe to PATH". Install **Git** from git-scm.com.
+2. Download the code and install the bot's libraries:
+   ```powershell
+   cd $HOME
+   git clone https://github.com/Hashmatullahzaher/AI-OP-Tele-bot.git
+   cd AI-OP-Tele-bot
+   py -m venv .venv
+   .\.venv\Scripts\Activate.ps1
+   pip install -r requirements-bot.txt
+   ```
+   If PowerShell refuses to run `Activate.ps1`, first run `Set-ExecutionPolicy -Scope CurrentUser RemoteSigned`.
+3. Make a private settings folder and copy the examples into it:
+   ```powershell
+   mkdir $HOME\osai-secrets
+   copy deploy\bot\bot.env.example $HOME\osai-secrets\bot.env
+   copy deploy\bot\catalog.example.json $HOME\osai-secrets\catalog.json
+   notepad $HOME\osai-secrets\bot.env
+   ```
+4. Put the Google key file into `osai-secrets` as `google-service-account.json`.
+5. In `bot.env`, fill in the token, AI key and model as in Step 5. Then add these two lines, replacing `YOU` with your Windows user name:
+   ```
+   OSAI_CATALOG_PATH=C:\Users\YOU\osai-secrets\catalog.json
+   OSAI_GOOGLE_KEY_FILE=C:\Users\YOU\osai-secrets\google-service-account.json
+   ```
+6. Edit `catalog.json` as in Step 5, then check and run:
+   ```powershell
+   python -m osai.bot check --env-file $HOME\osai-secrets\bot.env
+   python -m osai.bot run --env-file $HOME\osai-secrets\bot.env
+   ```
+   Leave the window open while you test, and press Ctrl+C to stop. Do Step 6 to add yourself.
+
+**Mac or Linux:** follow the same steps with `python3 -m venv .venv`, `source .venv/bin/activate` and `~/osai-secrets` paths.
+
+Never put the `osai-secrets` folder inside the `AI-OP-Tele-bot` folder, so it can never be committed to Git.
+
 ## Updating
 
 ```bash

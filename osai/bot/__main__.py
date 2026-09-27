@@ -4,6 +4,7 @@ Usage::
 
     python -m osai.bot check   # validate configuration, no network calls
     python -m osai.bot run     # start Telegram long polling
+    python -m osai.bot run --env-file bot.env   # read settings from a file (local PCs)
 
 Configuration comes from environment variables (see ``deploy/bot/bot.env.example``);
 secrets never go in Git.
@@ -39,6 +40,12 @@ class BotConfig:
     llm: LLMSettings
 
 
+def _default_data_dir(env: Mapping[str, str]) -> str:
+    if os.name == "nt" and env.get("LOCALAPPDATA"):
+        return str(Path(env["LOCALAPPDATA"]) / "OSAI" / "bot")
+    return "/var/lib/osai"
+
+
 def config_from_env(env: Mapping[str, str]) -> BotConfig:
     token = env.get("OSAI_TELEGRAM_BOT_TOKEN", "").strip()
     if not re.fullmatch(r"[0-9]{1,20}:[A-Za-z0-9_-]{20,200}", token):
@@ -50,7 +57,7 @@ def config_from_env(env: Mapping[str, str]) -> BotConfig:
         telegram_token=token,
         catalog=load_catalog(env.get("OSAI_CATALOG_PATH", "/etc/osai/catalog.json")),
         google_key_file=key_file,
-        data_dir=Path(env.get("OSAI_DATA_DIR", "/var/lib/osai")),
+        data_dir=Path(env.get("OSAI_DATA_DIR") or _default_data_dir(env)),
         llm=settings_from_env(env),
     )
 
@@ -76,12 +83,46 @@ def build_service(config: BotConfig) -> BotService:
     return BotService(agent=agent, catalog=config.catalog)
 
 
+def read_env_file(path: str) -> dict[str, str]:
+    """Parse KEY=VALUE lines; blank lines and # comments are ignored."""
+
+    values: dict[str, str] = {}
+    try:
+        lines = Path(path).read_text(encoding="utf-8-sig").splitlines()
+    except OSError as exc:
+        raise ValueError(f"cannot read env file {path}") from exc
+    for number, line in enumerate(lines, start=1):
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#"):
+            continue
+        key, sep, value = stripped.partition("=")
+        if not sep or not re.fullmatch(r"[A-Z][A-Z0-9_]*", key.strip()):
+            raise ValueError(f"env file line {number} is not KEY=VALUE")
+        value = value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in {"'", '"'}:
+            value = value[1:-1]
+        values[key.strip()] = value
+    return values
+
+
 def main(argv: list[str] | None = None) -> int:
-    args = sys.argv[1:] if argv is None else argv
+    args = list(sys.argv[1:] if argv is None else argv)
+    env_file: str | None = None
+    if "--env-file" in args:
+        index = args.index("--env-file")
+        if index + 1 >= len(args):
+            print("usage: --env-file PATH", file=sys.stderr)
+            return 2
+        env_file = args[index + 1]
+        del args[index : index + 2]
     command = args[0] if args else "run"
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
     try:
-        config = config_from_env(os.environ)
+        env = dict(os.environ)
+        if env_file is not None:
+            # Real environment variables win over the file.
+            env = {**read_env_file(env_file), **env}
+        config = config_from_env(env)
     except ValueError as exc:
         print(f"configuration error: {exc}", file=sys.stderr)
         return 2
