@@ -10,7 +10,7 @@ A Telegram bot that staff message in **Dari, Pashto or English, by text or voice
 - **First user:** our own company, on its real data.
 - **Done means:** a **client-ready demo**. A prospective client watches a live Telegram conversation (text and voice) answered correctly from Google Sheets, with role restrictions visibly working. A separate demo company with synthetic data is used for client demos, so our real data is never shown.
 - **Target:** 3 weeks from the owner's sign-off on this plan.
-- **Budget:** under $50/month total (server, AI model and speech-to-text).
+- **Budget:** under $50/month total. With free AI models and self-hosted speech-to-text, the expected cost is the server alone, about $10–20/month.
 
 ## 2. Scope
 
@@ -18,8 +18,8 @@ A Telegram bot that staff message in **Dari, Pashto or English, by text or voice
 |---|---|
 | Telegram private chat: text and voice notes | Write actions (F9: customers, procurement, draft vouchers) |
 | Google Sheets / Drive, read-only | Excel sandbox UAT and Telegram → Excel write flow |
-| Roles: which folders and sheets each role may see | Windows installer, Setup Wizard, Portable `.exe` |
-| Pluggable AI model (cloud first; see D-2) | PDF reports (a CSV/XLSX answer attachment may stay) |
+| Role checks (one role, CEO, for now; see D-4) | Windows installer, Setup Wizard, Portable `.exe` |
+| Pluggable AI model (OpenRouter free models first; see D-1) | PDF reports (a CSV/XLSX answer attachment may stay) |
 | Audit log, per-user pairing, cost limit | Fully local AI model (the interface stays; delivery is v2) |
 | Cloud VPS deployment, backup, runbook | ERP REST connector: code kept; wiring is **v1.1** (see §5) |
 | Demo company with synthetic data | Multi-customer billing and self-service onboarding |
@@ -60,27 +60,25 @@ Telegram (long polling, no public HTTPS needed)
 | **3** | **Client-ready.** Demo company, cost cap and usage report, deployment script, backup/restore drill, runbook, demo script. Team uses it daily. | Eval ≥ 90% (Dari/English); Pashto measured and reported. A full dry-run demo passes. Monthly cost projection under $50. |
 | **v1.1** | ERP read-only through the existing REST connector. Can start in parallel once the ERP API documentation and a read-only test account arrive. | ERP questions answered with the same safeguards. |
 
-## 6. Decisions the owner must make now
+## 6. Owner decisions (answered 2026-09-27)
 
-- **D-1 Model vs. budget.** At about 50 questions a day across the team, with roughly 15K input and 1.5K output tokens per question, the approximate model cost per month (before prompt-caching savings) is:
-  - Claude Haiku 4.5: about $35
-  - Claude Sonnet 5: about $70
-  - Claude Opus 5: about $170
-
-  Staying under $50 means Haiku-class, fewer questions, or raising the budget. **Recommendation:** start on Haiku 4.5 behind the pluggable interface, measure accuracy against the eval set in week 1, and escalate only if Dari/Pashto accuracy falls short. Server costs are extra, at about $5–10 a month.
-- **D-2 AI provider.** "Customer chooses" is kept as an interface. V1 ships **one** cloud adapter; a local-model adapter is v2.
-- **D-3 Pashto voice.** Speech-to-text for Pashto is weak across all providers today. Dari (close to Persian) is much better. **Recommendation:** v1 guarantees Dari and English voice, and Pashto voice is best effort with its accuracy measured and reported honestly. Pashto *text* is fully in scope.
-- **D-4 Roles.** The owner lists the initial roles and which Drive folders each may see. For example: Owner = all; Finance = finance folder; Sales = sales folder.
+- **D-1 AI model: free models through OpenRouter (not OpenAI/ChatGPT).** V1 ships an OpenRouter adapter behind the existing provider interface, and the model name is a setting, so we can change model without changing code. In week 1 we test the free models that support tool calling against the eval set and pick the most accurate one for Dari, Pashto and English. Known trade-offs, accepted:
+  - **Privacy:** the providers behind free models may log prompts or use them for training. Questions and the sheet values sent to answer them leave our server. That is acceptable for the synthetic demo company. For real company data, the owner confirms in week 1 after reviewing OpenRouter's data policy for the chosen model; the fallback is a low-cost paid model with no-training terms.
+  - **Rate limits:** free models have daily and per-minute request caps and can be temporarily unavailable. The bot says "busy, try again shortly" instead of failing silently, and the usage report tracks how close we are to the caps.
+- **D-2 Provider interface:** "customer chooses" stays as an interface. V1 ships OpenRouter only; other adapters (paid or local) come later.
+- **D-3 Pashto voice: accepted.** Dari and English voice are guaranteed. Pashto voice is best effort, with its accuracy measured and reported. Pashto text is fully in scope.
+- **D-4 Roles: one role for now, CEO**, with access to every shared folder. The role and policy checks stay in the code, so more roles can be added later without redesign.
+- **D-5 Speech-to-text (lead's choice, following the free-first preference):** run the open-source Whisper model on our own server. It is free, and voice audio never leaves the server. This needs a VPS with about 4 GB RAM. A paid speech API is the fallback if accuracy or speed is not good enough.
 
 ## 7. What the owner provides (the lead supplies step-by-step guides)
 
 Secrets go only into the server's environment file, **never** into chat or Git.
 
-1. A small Linux VPS (Ubuntu 24.04, 1–2 GB RAM).
+1. A small Linux VPS (Ubuntu 24.04, about 4 GB RAM for self-hosted speech-to-text).
 2. A Telegram bot created with @BotFather (the token goes on the server).
 3. A Google Cloud project, a service account with the Sheets and Drive APIs enabled, and the chosen folders shared with that service account's email.
-4. An API key for the AI model chosen in D-1, with a monthly spend limit set in the provider console.
-5. A speech-to-text API key (the provider is chosen in week 1 by testing Dari/Pashto samples).
+4. An OpenRouter account and API key (free tier), with a credit limit of $0 so nothing can be charged by accident.
+5. A few real voice notes in Dari, Pashto and English (with their correct transcripts) to test speech-to-text accuracy.
 6. 40–60 real questions staff would ask, with the correct answers, to form the evaluation set.
 7. ERP API documentation and a read-only test account (for v1.1).
 

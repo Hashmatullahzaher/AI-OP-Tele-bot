@@ -28,4 +28,8 @@
 | DEC-018 | AI model is customer-selectable behind a provider interface; v1 ships one cloud adapter, a local model is v2. | CONFIRMED 2026-09-27 | Model choice under the budget is decision D-1 in `V1_PLAN.md`. |
 | DEC-019 | V1 has staff roles that restrict which data each person can see; target 2–3 weeks; running budget under $50/month; owner performs account setup from lead-provided guides. | CONFIRMED 2026-09-27 | Secrets live only in server environment files. |
 
+| DEC-020 | V1 AI model: free models through OpenRouter, not OpenAI/ChatGPT; model name is configuration. | CONFIRMED 2026-09-27 | Privacy and rate-limit trade-offs recorded in `V1_PLAN.md` D-1; real-data use re-confirmed in week 1. |
+| DEC-021 | Pashto voice is best effort with measured accuracy; Dari and English voice are guaranteed; Pashto text is fully supported. | CONFIRMED 2026-09-27 | Resolves D-3. |
+| DEC-022 | V1 has one role, CEO, with access to all shared folders; role checks stay in code for later roles. | CONFIRMED 2026-09-27 | Resolves D-4. Speech-to-text is self-hosted Whisper (D-5). |
+
 Decision changes require author/date/rationale and affected acceptance criteria to be recorded here and in `OPEN_ITEMS.md` when applicable.
