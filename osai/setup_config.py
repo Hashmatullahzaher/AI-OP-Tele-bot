@@ -246,10 +246,15 @@ class WindowsDpapiSecretStore:
     _CRYPTPROTECT_UI_FORBIDDEN = 0x1
     _CRYPTPROTECT_LOCAL_MACHINE = 0x4
 
-    def __init__(self, path: str | Path) -> None:
+    def __init__(self, path: str | Path, *, machine_scope: bool = True) -> None:
         if os.name != "nt":
             raise RuntimeError("Windows DPAPI secret store is available only on Windows")
         self.path = Path(path)
+        # Machine scope suits the Windows service account; the desktop app uses
+        # per-user scope so only the signed-in Windows user can decrypt.
+        self._flags = self._CRYPTPROTECT_UI_FORBIDDEN | (
+            self._CRYPTPROTECT_LOCAL_MACHINE if machine_scope else 0
+        )
         self._ctypes = cast(Any, ctypes)
         self._crypt32 = self._ctypes.WinDLL("Crypt32", use_last_error=True)
         self._kernel32 = self._ctypes.WinDLL("Kernel32", use_last_error=True)
@@ -295,7 +300,7 @@ class WindowsDpapiSecretStore:
             None,
             None,
             None,
-            self._CRYPTPROTECT_UI_FORBIDDEN | self._CRYPTPROTECT_LOCAL_MACHINE,
+            self._flags,
             ctypes.byref(output),
         )
         if not ok:
@@ -318,7 +323,7 @@ class WindowsDpapiSecretStore:
             None,
             None,
             None,
-            self._CRYPTPROTECT_UI_FORBIDDEN | self._CRYPTPROTECT_LOCAL_MACHINE,
+            self._flags,
             ctypes.byref(output),
         )
         if not ok:

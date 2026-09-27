@@ -34,4 +34,6 @@
 
 | DEC-023 | The AI connection must not be tied to one vendor: any OpenAI-compatible API (OpenRouter, OpenAI, Groq, Gemini, DeepSeek, Mistral, Together, Azure, self-hosted), the native Anthropic API, and local models are supported, with API-key, custom-header, no-auth or sign-in-token (command) authentication. OpenRouter free models remain the v1 default. | CONFIRMED 2026-09-27 | Implemented in `osai/llm/`; configured only through server environment variables. |
 
+| DEC-024 | Ship an installable Windows desktop app ("OS AI Assistant") as the primary way the owner uses v1: per-user installer with no administrator rights, a localhost browser UI, a settings page for any AI provider (key encrypted with per-user DPAPI), and automatic discovery of Excel/CSV files in `Documents\OS AI Assistant Data`. | CONFIRMED 2026-09-27 | Owner request: "installable software that I install in laptop and start using". Telegram and the server deployment remain available. See `docs/05-operations/DESKTOP_APP.md`. |
+
 Decision changes require author/date/rationale and affected acceptance criteria to be recorded here and in `OPEN_ITEMS.md` when applicable.

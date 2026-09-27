@@ -65,6 +65,9 @@ class BotService:
         self.agent = agent
         self.catalog = catalog
         self.voice = voice
+        # Sanitized reason for the last failed answer (never contains secrets);
+        # shown by the desktop app to help the owner fix settings.
+        self.last_error: str | None = None
 
     def handle_voice(self, *, telegram_user_id: int, voice: Mapping[str, Any], download: Downloader) -> str:
         """Authorize first, then download, transcribe, answer and echo the transcript."""
@@ -119,6 +122,7 @@ class BotService:
     def answer_as(self, user: BotUser, text: str) -> str:
         """Answer for an already-identified catalog user (Telegram or local web chat)."""
 
+        self.last_error = None
         lang = detect_language(text)
         clean = text.strip()
         command = clean.split(maxsplit=1)[0].split("@")[0] if clean else ""
@@ -133,12 +137,15 @@ class BotService:
             answer = self.agent.ask(message=clean, context=context)
         except ProviderUnavailable as exc:
             log.warning("provider unavailable correlation=%s reason=%s", context.correlation_id, exc)
+            self.last_error = str(exc)
             return message(lang, "busy")
         except AgentPlanInvalid as exc:
             log.info("plan rejected correlation=%s reason=%s", context.correlation_id, exc)
+            self.last_error = str(exc)
             return message(lang, "not_understood")
         except AgentError as exc:
             log.info("agent error correlation=%s code=%s", context.correlation_id, exc.code)
+            self.last_error = str(exc)
             return message(lang, _ERROR_KEYS.get(exc.code, "error"))
         except Exception:
             log.exception("unexpected failure correlation=%s", context.correlation_id)

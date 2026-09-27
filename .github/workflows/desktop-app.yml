@@ -1,0 +1,91 @@
+name: Desktop App
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-install-smoke:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install pyinstaller
+      - name: Run desktop unit tests
+        run: python -m unittest tests.test_desktop -v
+      - name: Build OS-AI-Assistant.exe
+        run: pyinstaller --noconfirm --clean packaging/windows/os-ai-assistant.spec
+      - name: Smoke the built executable
+        shell: pwsh
+        run: .\scripts\windows\desktop-smoke.ps1 -Exe ".\dist\OS-AI-Assistant.exe" -Label "built exe"
+      - name: Install Inno Setup
+        shell: pwsh
+        run: choco install innosetup -y --no-progress
+      - name: Compile installer
+        shell: pwsh
+        run: |
+          $iscc = "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe"
+          if (-not (Test-Path $iscc)) { $iscc = (Get-Command iscc.exe).Source }
+          & $iscc "/DMyAppVersion=0.2.${{ github.run_number }}" "packaging\windows\os-ai-assistant.iss"
+          if ($LASTEXITCODE -ne 0) { throw "Inno Setup compilation failed." }
+      - name: Install silently, smoke the installed app, uninstall
+        shell: pwsh
+        run: |
+          $setup = Start-Process -FilePath ".\installer-dist\OS-AI-Assistant-Setup.exe" `
+            -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/CURRENTUSER" -Wait -PassThru
+          if ($setup.ExitCode -ne 0) { throw "Installer failed with code $($setup.ExitCode)" }
+          $installDir = Join-Path $env:LOCALAPPDATA "Programs\OS AI Assistant"
+          $exe = Join-Path $installDir "OS-AI-Assistant.exe"
+          if (-not (Test-Path $exe)) { throw "Installed executable not found at $exe" }
+          $shortcut = Join-Path $env:APPDATA "Microsoft\Windows\Start Menu\Programs\OS AI Assistant\OS AI Assistant.lnk"
+          if (-not (Test-Path $shortcut)) { throw "Start menu shortcut missing" }
+          .\scripts\windows\desktop-smoke.ps1 -Exe $exe -Label "installed app"
+          $uninstaller = Get-ChildItem $installDir -Filter "unins*.exe" | Select-Object -First 1
+          $un = Start-Process -FilePath $uninstaller.FullName -ArgumentList "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART" -Wait -PassThru
+          if ($un.ExitCode -ne 0) { throw "Uninstaller failed with code $($un.ExitCode)" }
+          Start-Sleep -Seconds 3
+          if (Test-Path $exe) { throw "Uninstall left the executable behind" }
+          Write-Output "DESKTOP_INSTALL_UNINSTALL_PASS"
+      - name: Upload installer
+        uses: actions/upload-artifact@v4
+        with:
+          name: os-ai-assistant-windows-installer
+          path: installer-dist/OS-AI-Assistant-Setup.exe
+          if-no-files-found: error
+          retention-days: 30
+
+  publish:
+    # Keep one always-current download link: Releases -> "OS AI Assistant (latest)".
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: build-install-smoke
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: os-ai-assistant-windows-installer
+      - name: Publish to the desktop-latest release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if gh release view desktop-latest >/dev/null 2>&1; then
+            gh release upload desktop-latest OS-AI-Assistant-Setup.exe --clobber
+            gh release edit desktop-latest --target "$GITHUB_SHA" \
+              --notes "Latest build of OS AI Assistant from main (${GITHUB_SHA::7}). Download OS-AI-Assistant-Setup.exe and run it."
+          else
+            gh release create desktop-latest OS-AI-Assistant-Setup.exe --target "$GITHUB_SHA" --prerelease \
+              --title "OS AI Assistant (latest)" \
+              --notes "Latest build of OS AI Assistant from main (${GITHUB_SHA::7}). Download OS-AI-Assistant-Setup.exe and run it."
+          fi
